@@ -616,9 +616,7 @@
                     }
                 });
 
-                const closeModal = () => {
-                    addTripModal.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
+                const resetTripFormState = () => {
                     addTripForm.reset();
                     setTodayTripDate();
                     const editingInput = document.getElementById('editing-trip-id');
@@ -637,6 +635,13 @@
                         for (let k in expenseAmounts) delete expenseAmounts[k];
                     }
                     if (typeof renderExpenseDropdownUI === 'function') renderExpenseDropdownUI();
+                    if (typeof updateModalSummary === 'function') updateModalSummary();
+                };
+
+                const closeModal = () => {
+                    addTripModal.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                    resetTripFormState();
                 };
 
                 if (closeAddTripBtn) closeAddTripBtn.addEventListener('click', closeModal);
@@ -1447,21 +1452,14 @@
 
                         const json = await res.json();
                         if (json.success) {
-                            loadTripsFromDB();
+                            if (typeof window.loadTripsFromDB === 'function') {
+                                window.loadTripsFromDB();
+                            }
 
                             if (closeAfter) {
                                 closeModal();
                             } else {
-                                incomeInput.value = '';
-                                const fromInput = document.getElementById('new-trip-from');
-                                if (fromInput) fromInput.value = '';
-                                const toInput = document.getElementById('new-trip-to');
-                                if (toInput) toInput.value = '';
-                                const remarksInput = document.getElementById('new-trip-remarks');
-                                if (remarksInput) remarksInput.value = '';
-                                selectedExpenses.clear();
-                                for (let k in expenseAmounts) delete expenseAmounts[k];
-                                renderExpenseDropdownUI();
+                                resetTripFormState();
 
                                 const toast = document.getElementById('trip-saved-toast');
                                 if (toast) {

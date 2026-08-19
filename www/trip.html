@@ -616,9 +616,7 @@
                     }
                 });
 
-                const closeModal = () => {
-                    addTripModal.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
+                const resetTripFormState = () => {
                     addTripForm.reset();
                     setTodayTripDate();
                     const editingInput = document.getElementById('editing-trip-id');
@@ -637,6 +635,13 @@
                         for (let k in expenseAmounts) delete expenseAmounts[k];
                     }
                     if (typeof renderExpenseDropdownUI === 'function') renderExpenseDropdownUI();
+                    if (typeof updateModalSummary === 'function') updateModalSummary();
+                };
+
+                const closeModal = () => {
+                    addTripModal.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                    resetTripFormState();
                 };
 
                 if (closeAddTripBtn) closeAddTripBtn.addEventListener('click', closeModal);
@@ -1239,10 +1244,10 @@
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     ${routeHTML}
-                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); openEditTripModal(${t.id});" class="p-1 rounded-lg text-primary hover:bg-primary/10 transition-colors ml-1" title="Edit Trip">
+                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); openEditTripModal(${t.id});" class="h-8 w-8 flex items-center justify-center p-1 rounded-full text-primary hover:bg-primary/10 transition-colors ml-1" title="Edit Trip">
                                         <span class="material-symbols-outlined text-[18px]">edit</span>
                                     </button>
-                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); deleteTrip(${t.id}, '${t.driver_name}');" class="p-1 rounded-lg text-error hover:bg-error/10 transition-colors" title="Delete Trip">
+                                    <button type="button" onclick="event.preventDefault(); event.stopPropagation(); deleteTrip(${t.id}, '${t.driver_name}');" class="h-8 w-8 flex items-center justify-center p-1 rounded-full text-error hover:bg-error/10 transition-colors" title="Delete Trip">
                                         <span class="material-symbols-outlined text-[18px]">delete</span>
                                     </button>
                                 </div>
@@ -1447,21 +1452,14 @@
 
                         const json = await res.json();
                         if (json.success) {
-                            loadTripsFromDB();
+                            if (typeof window.loadTripsFromDB === 'function') {
+                                window.loadTripsFromDB();
+                            }
 
                             if (closeAfter) {
                                 closeModal();
                             } else {
-                                incomeInput.value = '';
-                                const fromInput = document.getElementById('new-trip-from');
-                                if (fromInput) fromInput.value = '';
-                                const toInput = document.getElementById('new-trip-to');
-                                if (toInput) toInput.value = '';
-                                const remarksInput = document.getElementById('new-trip-remarks');
-                                if (remarksInput) remarksInput.value = '';
-                                selectedExpenses.clear();
-                                for (let k in expenseAmounts) delete expenseAmounts[k];
-                                renderExpenseDropdownUI();
+                                resetTripFormState();
 
                                 const toast = document.getElementById('trip-saved-toast');
                                 if (toast) {
