@@ -304,6 +304,21 @@ app.get('/api/charts', async (req, res) => {
         const allowance = parseFloat(expRow.allowance);
         const others = parseFloat(expRow.others);
 
+        // Last 6 months trip count
+        const monthlyRes = await pool.query(`
+            SELECT 
+                TO_CHAR(month_series, 'Mon') as month_name,
+                COALESCE(COUNT(t.id), 0) as trip_count
+            FROM GENERATE_SERIES(
+                DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months',
+                DATE_TRUNC('month', CURRENT_DATE),
+                INTERVAL '1 month'
+            ) as month_series
+            LEFT JOIN trips t ON DATE_TRUNC('month', t.trip_date) = month_series
+            GROUP BY month_series
+            ORDER BY month_series ASC
+        `);
+
         res.json({
             success: true,
             data: {
@@ -312,6 +327,10 @@ app.get('/api/charts', async (req, res) => {
                     day: r.day_name || 'Day',
                     earnings: parseFloat(r.earnings),
                     expenses: parseFloat(r.expenses)
+                })),
+                monthlyTrend: monthlyRes.rows.map(r => ({
+                    month: r.month_name,
+                    count: parseInt(r.trip_count, 10)
                 }))
             }
         });
@@ -321,9 +340,57 @@ app.get('/api/charts', async (req, res) => {
             success: true,
             data: {
                 expenseBreakdown: { fuel: 0, tolls: 0, allowance: 0, others: 0 },
-                trend: []
+                trend: [],
+                monthlyTrend: []
             }
         });
+    }
+});
+
+// 9. Delete Driver
+app.delete('/api/drivers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM trips WHERE driver_id = $1', [id]);
+        const delRes = await pool.query('DELETE FROM drivers WHERE id = $1 RETURNING *', [id]);
+
+        if (delRes.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Driver not found' });
+        }
+
+        res.json({ success: true, message: 'Driver deleted successfully' });
+    } catch (err) {
+        console.error('API DELETE /api/drivers/:id Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 10. Delete Trip
+app.delete('/api/trips/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const tripRes = await pool.query('DELETE FROM trips WHERE id = $1 RETURNING *', [id]);
+
+        if (tripRes.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Trip record not found' });
+        }
+
+        const t = tripRes.rows[0];
+        if (t.driver_id) {
+            const inc = parseFloat(t.income || 0);
+            await pool.query(
+                `UPDATE drivers SET 
+                    trips_count = GREATEST(0, trips_count - 1), 
+                    total_earnings = GREATEST(0, total_earnings - $1) 
+                WHERE id = $2`,
+                [inc, t.driver_id]
+            );
+        }
+
+        res.json({ success: true, message: 'Trip deleted successfully' });
+    } catch (err) {
+        console.error('API DELETE /api/trips/:id Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

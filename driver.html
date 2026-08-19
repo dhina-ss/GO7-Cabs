@@ -342,7 +342,12 @@
                                     <p class="text-[11px] text-on-surface-variant">ID: ${d.id} ${d.phone ? '• ' + d.phone : ''}</p>
                                 </div>
                             </div>
-                            <span class="text-[11px] text-primary font-medium flex items-center">View Profile <span class="material-symbols-outlined text-[14px] ml-0.5">chevron_right</span></span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); deleteDriver('${d.id}', '${d.name}');" class="p-1.5 rounded-lg text-error hover:bg-error/10 transition-colors" title="Delete Driver">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                                <span class="text-[11px] text-primary font-medium flex items-center">View Profile <span class="material-symbols-outlined text-[14px] ml-0.5">chevron_right</span></span>
+                            </div>
                         </div>
                         <div class="h-px w-full bg-outline-variant/30"></div>
                         <div class="flex justify-between items-center">
@@ -359,6 +364,23 @@
                     driverListContainer.appendChild(card);
                 });
             }
+
+            window.deleteDriver = async function(id, name) {
+                if (!confirm(`Are you sure you want to delete driver "${name}" (${id})? This will also remove associated trips.`)) {
+                    return;
+                }
+                try {
+                    const res = await fetch(`/api/drivers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                    const json = await res.json();
+                    if (json.success) {
+                        loadDriversFromDB();
+                    } else {
+                        alert(json.message || 'Could not delete driver');
+                    }
+                } catch (err) {
+                    console.error('Error deleting driver:', err);
+                }
+            };
 
             // Modal Handlers
             if (openAddBtn && addModal) {
