@@ -36,7 +36,7 @@ function formatAmount(val) {
     return parseFloat(val || 0);
 }
 
-// Ensure soft delete and timestamp columns exist
+// Ensure soft delete, timestamp, and driver_amounts columns exist
 async function initDatabaseSchema() {
     try {
         await pool.query(`
@@ -45,6 +45,7 @@ async function initDatabaseSchema() {
             ALTER TABLE drivers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
             ALTER TABLE trips ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
             ALTER TABLE trips ADD COLUMN IF NOT EXISTS trip_code VARCHAR(50);
+            ALTER TABLE trips ADD COLUMN IF NOT EXISTS driver_amounts JSONB;
         `);
 
         // Backfill missing trip_code values if any exist
@@ -57,11 +58,76 @@ async function initDatabaseSchema() {
             }
             console.log(`[OK] Backfilled ${unassignedTrips.rows.length} trips with GO7C{YY}{INCREMENT} trip_code`);
         }
-        console.log('[OK] Database schema verified with timestamps, trip_code & soft-delete support');
+        await syncAllDriverStats();
+        console.log('[OK] Database schema verified & driver earnings recalculated with split expense deduction');
     } catch (err) {
         console.warn('DB schema init warning:', err.message);
     }
 }
+
+// Sync driver trips_count and total_earnings (Subtracting split expenses per driver)
+async function syncAllDriverStats() {
+    try {
+        const driversRes = await pool.query("SELECT * FROM drivers WHERE COALESCE(is_deleted, false) = false AND status != 'Deleted'");
+        const tripsRes = await pool.query("SELECT * FROM trips WHERE COALESCE(is_deleted, false) = false");
+        const allTrips = tripsRes.rows;
+
+        for (const drv of driversRes.rows) {
+            let count = 0;
+            let netEarningsSum = 0;
+            const drvNameLower = String(drv.name || '').trim().toLowerCase();
+
+            allTrips.forEach(t => {
+                const names = String(t.driver_name || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                const isAssigned = names.includes(drvNameLower) || t.driver_id === drv.id;
+
+                if (isAssigned) {
+                    count++;
+                    const numDrivers = names.length || 1;
+                    const inc = parseFloat(t.income || 0);
+                    const f = parseFloat(t.fuel || 0);
+                    const tol = parseFloat(t.tolls || 0);
+                    const al = parseFloat(t.allowance || 0);
+                    const oth = parseFloat(t.others || 0);
+                    const totalExp = f + tol + al + oth;
+
+                    const expPerDriver = totalExp / numDrivers;
+                    let incPerDriver = inc / numDrivers;
+
+                    // Check for custom driver_amounts
+                    if (t.driver_amounts) {
+                        let dAmts = t.driver_amounts;
+                        if (typeof dAmts === 'string') {
+                            try { dAmts = JSON.parse(dAmts); } catch (e) {}
+                        }
+                        if (dAmts && typeof dAmts === 'object') {
+                            for (let k in dAmts) {
+                                if (k.trim().toLowerCase() === drvNameLower) {
+                                    const parsedVal = parseFloat(dAmts[k]);
+                                    if (!isNaN(parsedVal)) {
+                                        incPerDriver = parsedVal;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    const netEarningsForTrip = incPerDriver - expPerDriver;
+                    netEarningsSum += netEarningsForTrip;
+                }
+            });
+
+            await pool.query(
+                `UPDATE drivers SET trips_count = $1, total_earnings = $2 WHERE id = $3`,
+                [count, Math.max(0, netEarningsSum), drv.id]
+            );
+        }
+    } catch (err) {
+        console.warn('Sync driver stats warning:', err.message);
+    }
+}
+
 initDatabaseSchema();
 
 // -------------------------------------------------------------
@@ -103,6 +169,7 @@ app.get('/api/stats', async (req, res) => {
 // 2. Get All Drivers
 app.get('/api/drivers', async (req, res) => {
     try {
+        await syncAllDriverStats();
         const { search } = req.query;
         let query = "SELECT * FROM drivers WHERE COALESCE(is_deleted, false) = false AND status != 'Deleted'";
         let params = [];
@@ -125,6 +192,7 @@ app.get('/api/drivers', async (req, res) => {
 // 3. Get Single Driver Details
 app.get('/api/drivers/:id', async (req, res) => {
     try {
+        await syncAllDriverStats();
         const { id } = req.params;
         const driverRes = await pool.query('SELECT * FROM drivers WHERE id = $1 AND COALESCE(is_deleted, false) = false', [id]);
 
@@ -285,8 +353,8 @@ app.post('/api/trips', async (req, res) => {
         const insertRes = await pool.query(
             `INSERT INTO trips (
                 trip_code, driver_id, driver_name, trip_date, trip_type, 
-                from_location, to_location, income, fuel, tolls, allowance, others, net_profit, remarks
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+                from_location, to_location, income, fuel, tolls, allowance, others, net_profit, remarks, driver_amounts
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
             [
                 trip_code,
                 driverRes.rows.length > 0 ? driverRes.rows[0].id : null,
@@ -295,26 +363,13 @@ app.post('/api/trips', async (req, res) => {
                 trip_type || '1',
                 from_location || '',
                 to_location || '',
-                inc, f, t, a, o, net, remarks || ''
+                inc, f, t, a, o, net, remarks || '',
+                JSON.stringify(driver_amounts || {})
             ]
         );
 
-        // Update driver stats for all selected drivers (using individual assigned driver_amounts if provided)
-        if (driverRes.rows.length > 0) {
-            for (const dRow of driverRes.rows) {
-                const specificAmt = (driver_amounts && driver_amounts[dRow.name] !== undefined)
-                    ? formatAmount(driver_amounts[dRow.name])
-                    : (inc / (driverRes.rows.length || 1));
-
-                await pool.query(
-                    `UPDATE drivers SET 
-                        trips_count = trips_count + 1, 
-                        total_earnings = total_earnings + $1 
-                    WHERE id = $2`,
-                    [specificAmt, dRow.id]
-                );
-            }
-        }
+        // Recalculate driver stats for all drivers (subtracting split expenses per driver)
+        await syncAllDriverStats();
 
         res.status(201).json({ success: true, data: insertRes.rows[0] });
     } catch (err) {
@@ -426,17 +481,7 @@ app.delete('/api/trips/:id', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Trip record not found' });
         }
 
-        const t = tripRes.rows[0];
-        if (t.driver_id) {
-            const inc = parseFloat(t.income || 0);
-            await pool.query(
-                `UPDATE drivers SET 
-                    trips_count = GREATEST(0, trips_count - 1), 
-                    total_earnings = GREATEST(0, total_earnings - $1) 
-                WHERE id = $2`,
-                [inc, t.driver_id]
-            );
-        }
+        await syncAllDriverStats();
 
         res.json({ success: true, message: 'Trip soft-deleted successfully' });
     } catch (err) {
@@ -468,18 +513,6 @@ app.put('/api/trips/:id', async (req, res) => {
         if (oldTripRes.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Trip not found' });
         }
-        const oldTrip = oldTripRes.rows[0];
-
-        if (oldTrip.driver_id) {
-            const oldInc = parseFloat(oldTrip.income || 0);
-            await pool.query(
-                `UPDATE drivers SET 
-                    trips_count = GREATEST(0, trips_count - 1), 
-                    total_earnings = GREATEST(0, total_earnings - $1) 
-                WHERE id = $2`,
-                [oldInc, oldTrip.driver_id]
-            );
-        }
 
         const inc = formatAmount(income);
         const f = formatAmount(fuel);
@@ -505,8 +538,9 @@ app.put('/api/trips/:id', async (req, res) => {
                 allowance = $10, 
                 others = $11, 
                 net_profit = $12, 
-                remarks = $13 
-            WHERE id = $14 RETURNING *`,
+                remarks = $13,
+                driver_amounts = $14
+            WHERE id = $15 RETURNING *`,
             [
                 driverRes.rows.length > 0 ? driverRes.rows[0].id : null,
                 driver_name,
@@ -515,25 +549,12 @@ app.put('/api/trips/:id', async (req, res) => {
                 from_location || '',
                 to_location || '',
                 inc, f, t, a, o, net, remarks || '',
+                JSON.stringify(driver_amounts || {}),
                 id
             ]
         );
 
-        if (driverRes.rows.length > 0) {
-            for (const dRow of driverRes.rows) {
-                const specificAmt = (driver_amounts && driver_amounts[dRow.name] !== undefined)
-                    ? formatAmount(driver_amounts[dRow.name])
-                    : (inc / (driverRes.rows.length || 1));
-
-                await pool.query(
-                    `UPDATE drivers SET 
-                        trips_count = trips_count + 1, 
-                        total_earnings = total_earnings + $1 
-                    WHERE id = $2`,
-                    [specificAmt, dRow.id]
-                );
-            }
-        }
+        await syncAllDriverStats();
 
         res.json({ success: true, data: updateRes.rows[0] });
     } catch (err) {
