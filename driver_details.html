@@ -162,6 +162,18 @@
                         <span class="material-symbols-outlined text-[16px]">chat</span> Message
                     </a>
                 </div>
+
+                <!-- Created & Updated Date & Time -->
+                <div class="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-[11px] text-on-surface-variant flex flex-col gap-1.5 text-left mt-1">
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px] text-primary">calendar_add_on</span> Created Date &amp; Time:</span>
+                        <span id="driver-created-at" class="font-semibold text-on-surface font-mono">--</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px] text-emerald-600">history</span> Updated Date &amp; Time:</span>
+                        <span id="driver-updated-at" class="font-semibold text-on-surface font-mono">--</span>
+                    </div>
+                </div>
             </section>
 
             <!-- Performance Summary Bento Grid -->
@@ -347,9 +359,25 @@
                         const avatarInitial = document.getElementById('driver-avatar-initial');
                         if (avatarInitial) avatarInitial.textContent = d.name ? d.name.charAt(0).toUpperCase() : 'D';
 
-                        const idEl = document.getElementById('driver-display-id-phone');
-                        if (idEl) idEl.textContent = `ID: ${d.id}${d.phone ? ' • ' + d.phone : ''}`;
-                        updateDriverPhoneLinks(d.phone || '');
+                        const formatDT = (dtStr) => {
+                            if (!dtStr) return 'Not available';
+                            const dt = new Date(dtStr);
+                            if (isNaN(dt.getTime())) return 'Not available';
+                            return dt.toLocaleString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+                        };
+
+                        const createdEl = document.getElementById('driver-created-at');
+                        if (createdEl) createdEl.textContent = formatDT(d.created_at);
+
+                        const updatedEl = document.getElementById('driver-updated-at');
+                        if (updatedEl) updatedEl.textContent = formatDT(d.updated_at || d.created_at);
 
                         const tripsEl = document.getElementById('driver-total-trips');
                         if (tripsEl) tripsEl.textContent = d.trips_count || trips.length;

@@ -211,10 +211,15 @@
                 <input type="hidden" id="editing-trip-id" value="" />
                 <!-- Trip Date -->
                 <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Trip Date <span
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Trip Date (DD-MM-YYYY) <span
                             class="text-error">*</span></label>
-                    <input type="date" id="new-trip-date" required value="2023-10-24"
-                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none" />
+                    <div class="relative w-full">
+                        <input type="text" id="new-trip-date-display" placeholder="DD-MM-YYYY" readonly required
+                            class="w-full bg-surface-container-low border border-outline-variant rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface focus:ring-2 focus:ring-primary outline-none cursor-pointer" />
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[20px] pointer-events-none">calendar_month</span>
+                        <input type="date" id="new-trip-date" required
+                            class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" />
+                    </div>
                 </div>
 
                 <!-- Trip Type Custom Dropdown -->
@@ -567,17 +572,55 @@
             const summaryExpense = document.getElementById('modal-summary-expense');
             const summaryNet = document.getElementById('modal-summary-net');
 
+            const updateFormattedDateDisplay = () => {
+                const nativeInput = document.getElementById('new-trip-date');
+                const displayInput = document.getElementById('new-trip-date-display');
+                if (!nativeInput || !displayInput) return;
+
+                const val = nativeInput.value; // "YYYY-MM-DD"
+                if (val) {
+                    const parts = val.split('-');
+                    if (parts.length === 3) {
+                        displayInput.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        return;
+                    }
+                }
+                displayInput.value = '';
+            };
+            window.updateFormattedDateDisplay = updateFormattedDateDisplay;
+
+            const setTodayTripDate = () => {
+                const dateInput = document.getElementById('new-trip-date');
+                if (dateInput) {
+                    const today = new Date().toISOString().split('T')[0];
+                    dateInput.value = today;
+                    updateFormattedDateDisplay();
+                }
+            };
+            setTodayTripDate();
+
+            const nativeDateEl = document.getElementById('new-trip-date');
+            if (nativeDateEl) {
+                nativeDateEl.addEventListener('input', updateFormattedDateDisplay);
+                nativeDateEl.addEventListener('change', updateFormattedDateDisplay);
+            }
+
             // Modal Controls
             if (openAddTripBtn && addTripModal) {
                 openAddTripBtn.addEventListener('click', () => {
                     addTripModal.classList.remove('hidden');
                     document.body.classList.add('overflow-hidden');
+                    const editingInput = document.getElementById('editing-trip-id');
+                    if (!editingInput || !editingInput.value) {
+                        setTodayTripDate();
+                    }
                 });
 
                 const closeModal = () => {
                     addTripModal.classList.add('hidden');
                     document.body.classList.remove('overflow-hidden');
                     addTripForm.reset();
+                    setTodayTripDate();
                     const editingInput = document.getElementById('editing-trip-id');
                     if (editingInput) editingInput.value = '';
                     const titleEl = document.getElementById('modal-trip-title');
@@ -846,7 +889,7 @@
                             chip.className = 'inline-flex items-center gap-1 bg-primary text-white text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm';
                             chip.innerHTML = `
                                 ${name}
-                                <button type="button" class="hover:text-red-200 transition-colors ml-0.5" data-remove="${name}">
+                                <button type="button" class="h-4 w-4 flex items-center justify-center hover:text-red-200 transition-colors ml-0.5" data-remove="${name}">
                                     <span class="material-symbols-outlined text-[14px]">close</span>
                                 </button>
                             `;
@@ -874,7 +917,7 @@
                                 row.className = 'flex items-center justify-between gap-3 bg-surface-container-lowest p-2.5 rounded-xl border border-outline-variant/60 shadow-sm';
                                 row.innerHTML = `
                                     <span class="text-xs font-semibold text-on-surface flex items-center gap-1.5">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> ${name} Income
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> ${name}
                                     </span>
                                     <div class="relative w-36">
                                         <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs font-semibold">₹</span>
@@ -1036,7 +1079,7 @@
                             chip.className = 'inline-flex items-center gap-1 bg-primary text-white text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm';
                             chip.innerHTML = `
                                 ${key}
-                                <button type="button" class="hover:text-red-200 transition-colors ml-0.5" data-remove="${key}">
+                                <button type="button" class="h-4 w-4 flex items-center justify-center hover:text-red-200 transition-colors ml-0.5" data-remove="${key}">
                                     <span class="material-symbols-outlined text-[14px]">close</span>
                                 </button>
                             `;
@@ -1266,6 +1309,7 @@
                     if (t.trip_date) {
                         const d = new Date(t.trip_date);
                         document.getElementById('new-trip-date').value = d.toISOString().split('T')[0];
+                        if (typeof updateFormattedDateDisplay === 'function') updateFormattedDateDisplay();
                     }
                     const typeInput = document.getElementById('new-trip-type');
                     if (typeInput) typeInput.value = t.trip_type || '1';

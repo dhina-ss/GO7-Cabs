@@ -36,11 +36,13 @@ function formatAmount(val) {
     return parseFloat(val || 0);
 }
 
-// Ensure soft delete and trip_code columns exist
+// Ensure soft delete and timestamp columns exist
 async function initDatabaseSchema() {
     try {
         await pool.query(`
             ALTER TABLE drivers ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+            ALTER TABLE drivers ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+            ALTER TABLE drivers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
             ALTER TABLE trips ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
             ALTER TABLE trips ADD COLUMN IF NOT EXISTS trip_code VARCHAR(50);
         `);
@@ -55,7 +57,7 @@ async function initDatabaseSchema() {
             }
             console.log(`[OK] Backfilled ${unassignedTrips.rows.length} trips with GO7C{YY}{INCREMENT} trip_code`);
         }
-        console.log('[OK] Database schema verified with trip_code & soft-delete support');
+        console.log('[OK] Database schema verified with timestamps, trip_code & soft-delete support');
     } catch (err) {
         console.warn('DB schema init warning:', err.message);
     }
@@ -187,7 +189,7 @@ app.put('/api/drivers/:id', async (req, res) => {
         const { name, phone } = req.body;
 
         const updateRes = await pool.query(
-            'UPDATE drivers SET name = COALESCE($1, name), phone = COALESCE($2, phone) WHERE id = $3 RETURNING *',
+            'UPDATE drivers SET name = COALESCE($1, name), phone = COALESCE($2, phone), updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
             [name, phone, id]
         );
 
