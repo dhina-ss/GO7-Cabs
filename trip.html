@@ -516,6 +516,38 @@
         </div>
     </div>
 
+    <!-- Delete Trip Confirmation Modal Card -->
+    <div id="delete-trip-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="bg-surface-container-lowest w-full max-w-sm rounded-3xl border border-outline-variant/60 shadow-2xl p-6 relative flex flex-col items-center text-center space-y-4">
+            <div class="w-14 h-14 rounded-full bg-error/10 text-error flex items-center justify-center border border-error/20 shadow-sm">
+                <span class="material-symbols-outlined text-[28px]">delete_forever</span>
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-lg font-bold text-on-surface">Delete Trip?</h3>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                    Are you sure you want to delete the trip record for <span id="delete-trip-driver-name" class="font-bold text-on-surface"></span>?
+                </p>
+                <p class="text-[11px] text-error/90 bg-error/5 p-2 rounded-xl border border-error/10 mt-2 font-medium">
+                    ⚠️ Driver earnings & trip counts will be recalculated.
+                </p>
+            </div>
+
+            <div class="flex gap-3 w-full pt-2">
+                <button type="button" id="cancel-delete-trip-btn"
+                    class="flex-1 py-2.5 rounded-xl border border-outline-variant/80 text-on-surface font-semibold text-xs hover:bg-surface-container transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="confirm-delete-trip-btn"
+                    class="flex-1 py-2.5 rounded-xl bg-error text-white font-semibold text-xs hover:bg-error/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                    <span id="confirm-delete-trip-text">Delete Trip</span>
+                    <span id="confirm-delete-trip-spinner" class="hidden animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Modal & Live Calculations -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -1144,38 +1176,6 @@
                         tripListContainer.appendChild(card);
                     });
                 }
-
-    <!-- Delete Trip Confirmation Modal Card -->
-    <div id="delete-trip-modal"
-        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
-        <div class="bg-surface-container-lowest w-full max-w-sm rounded-3xl border border-outline-variant/60 shadow-2xl p-6 relative flex flex-col items-center text-center space-y-4">
-            <div class="w-14 h-14 rounded-full bg-error/10 text-error flex items-center justify-center border border-error/20 shadow-sm">
-                <span class="material-symbols-outlined text-[28px]">delete_forever</span>
-            </div>
-
-            <div class="space-y-1">
-                <h3 class="text-lg font-bold text-on-surface">Delete Trip?</h3>
-                <p class="text-xs text-on-surface-variant leading-relaxed">
-                    Are you sure you want to delete the trip record for <span id="delete-trip-driver-name" class="font-bold text-on-surface"></span>?
-                </p>
-                <p class="text-[11px] text-error/90 bg-error/5 p-2 rounded-xl border border-error/10 mt-2 font-medium">
-                    ⚠️ Driver earnings & trip counts will be recalculated.
-                </p>
-            </div>
-
-            <div class="flex gap-3 w-full pt-2">
-                <button type="button" id="cancel-delete-trip-btn"
-                    class="flex-1 py-2.5 rounded-xl border border-outline-variant/80 text-on-surface font-semibold text-xs hover:bg-surface-container transition-colors">
-                    Cancel
-                </button>
-                <button type="button" id="confirm-delete-trip-btn"
-                    class="flex-1 py-2.5 rounded-xl bg-error text-white font-semibold text-xs hover:bg-error/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
-                    <span id="confirm-delete-trip-text">Delete Trip</span>
-                    <span id="confirm-delete-trip-spinner" class="hidden animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
-                </button>
-            </div>
-        </div>
-    </div>
 
             let pendingDeleteTripId = null;
             const deleteTripModal = document.getElementById('delete-trip-modal');
