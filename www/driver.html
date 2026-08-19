@@ -279,9 +279,10 @@
                         class="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container transition-colors">
                         Cancel
                     </button>
-                    <button type="submit"
-                        class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-md transition-colors">
-                        Save Driver
+                    <button type="submit" id="save-driver-btn"
+                        class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-md transition-all flex items-center justify-center gap-2">
+                        <span id="save-driver-text">Save Driver</span>
+                        <span id="save-driver-spinner" class="hidden animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                     </button>
                 </div>
             </form>
@@ -300,6 +301,18 @@
             const searchInput = document.getElementById('search-driver-input');
             const totalDriversCount = document.getElementById('total-drivers-count');
 
+            async function fetchTotalDriversCount() {
+                try {
+                    const res = await fetch('/api/drivers');
+                    const json = await res.json();
+                    if (json.success && Array.isArray(json.data) && totalDriversCount) {
+                        totalDriversCount.textContent = json.data.length;
+                    }
+                } catch (err) {
+                    console.warn('Could not fetch total drivers count:', err);
+                }
+            }
+
             async function loadDriversFromDB(searchQuery = '') {
                 try {
                     let url = '/api/drivers';
@@ -308,9 +321,14 @@
                     const json = await res.json();
                     if (json.success && Array.isArray(json.data)) {
                         renderDriversList(json.data);
+                        if (!searchQuery && totalDriversCount) {
+                            totalDriversCount.textContent = json.data.length;
+                        } else if (searchQuery) {
+                            fetchTotalDriversCount();
+                        }
                     }
                 } catch (err) {
-                    console.warn('Could not fetch drivers from DB:', err);
+                    console.warn('Could not load drivers from DB:', err);
                 }
             }
 
@@ -372,7 +390,8 @@
                     const res = await fetch(`/api/drivers/${encodeURIComponent(id)}`, { method: 'DELETE' });
                     const json = await res.json();
                     if (json.success) {
-                        loadDriversFromDB();
+                        await loadDriversFromDB();
+                        await fetchTotalDriversCount();
                     } else {
                         alert(json.message || 'Could not delete driver');
                     }
@@ -403,6 +422,14 @@
                         const name = document.getElementById('new-driver-name').value.trim();
                         const mobile = document.getElementById('new-driver-mobile').value.trim();
 
+                        const submitBtn = document.getElementById('save-driver-btn');
+                        const btnText = document.getElementById('save-driver-text');
+                        const spinner = document.getElementById('save-driver-spinner');
+
+                        if (submitBtn) submitBtn.disabled = true;
+                        if (btnText) btnText.textContent = 'Saving...';
+                        if (spinner) spinner.classList.remove('hidden');
+
                         try {
                             const res = await fetch('/api/drivers', {
                                 method: 'POST',
@@ -412,10 +439,17 @@
                             const json = await res.json();
                             if (json.success) {
                                 closeModal();
-                                loadDriversFromDB();
+                                await loadDriversFromDB();
+                                await fetchTotalDriversCount();
+                            } else {
+                                alert(json.message || 'Error saving driver');
                             }
                         } catch (err) {
                             console.error('Error saving driver:', err);
+                        } finally {
+                            if (submitBtn) submitBtn.disabled = false;
+                            if (btnText) btnText.textContent = 'Save Driver';
+                            if (spinner) spinner.classList.add('hidden');
                         }
                     });
                 }

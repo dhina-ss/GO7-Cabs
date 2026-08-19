@@ -425,14 +425,16 @@
                 <div class="flex flex-col gap-2 pt-1">
                     <div class="flex gap-2.5">
                         <button type="submit" id="save-trip-btn"
-                            class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1">
-                            <span class="material-symbols-outlined text-[18px]">check</span>
-                            Save
+                            class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                            <span id="save-trip-icon" class="material-symbols-outlined text-[18px]">check</span>
+                            <span id="save-trip-text">Save</span>
+                            <span id="save-trip-spinner" class="hidden animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                         </button>
                         <button type="button" id="save-next-trip-btn"
-                            class="flex-1 py-2.5 rounded-xl bg-blue-50 text-primary font-semibold text-sm border border-primary/30 hover:bg-primary/10 transition-all active:scale-95 flex items-center justify-center gap-1">
-                            <span class="material-symbols-outlined text-[18px]">add_circle</span>
-                            Save &amp; Next
+                            class="flex-1 py-2.5 rounded-xl bg-blue-50 text-primary font-semibold text-sm border border-primary/30 hover:bg-primary/10 transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                            <span id="save-next-icon" class="material-symbols-outlined text-[18px]">add_circle</span>
+                            <span id="save-next-text">Save &amp; Next</span>
+                            <span id="save-next-spinner" class="hidden animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></span>
                         </button>
                     </div>
                 </div>
@@ -1232,6 +1234,30 @@
                     const url = editingId ? `/api/trips/${editingId}` : '/api/trips';
                     const method = editingId ? 'PUT' : 'POST';
 
+                    const saveBtn = document.getElementById('save-trip-btn');
+                    const saveIcon = document.getElementById('save-trip-icon');
+                    const saveText = document.getElementById('save-trip-text');
+                    const saveSpinner = document.getElementById('save-trip-spinner');
+
+                    const saveNextBtn = document.getElementById('save-next-trip-btn');
+                    const saveNextIcon = document.getElementById('save-next-icon');
+                    const saveNextText = document.getElementById('save-next-text');
+                    const saveNextSpinner = document.getElementById('save-next-spinner');
+
+                    if (closeAfter) {
+                        if (saveBtn) saveBtn.disabled = true;
+                        if (saveNextBtn) saveNextBtn.disabled = true;
+                        if (saveIcon) saveIcon.classList.add('hidden');
+                        if (saveText) saveText.textContent = 'Saving...';
+                        if (saveSpinner) saveSpinner.classList.remove('hidden');
+                    } else {
+                        if (saveBtn) saveBtn.disabled = true;
+                        if (saveNextBtn) saveNextBtn.disabled = true;
+                        if (saveNextIcon) saveNextIcon.classList.add('hidden');
+                        if (saveNextText) saveNextText.textContent = 'Saving...';
+                        if (saveNextSpinner) saveNextSpinner.classList.remove('hidden');
+                    }
+
                     try {
                         const res = await fetch(url, {
                             method: method,
@@ -1255,7 +1281,6 @@
                         const json = await res.json();
                         if (json.success) {
                             loadTripsFromDB();
-                            loadTripsFromDB();
 
                             if (closeAfter) {
                                 closeModal();
@@ -1277,9 +1302,22 @@
                                     setTimeout(() => toast.classList.add('hidden'), 2500);
                                 }
                             }
+                        } else {
+                            alert(json.message || 'Error saving trip record');
                         }
                     } catch (err) {
                         console.error('Error saving trip to DB:', err);
+                    } finally {
+                        if (saveBtn) saveBtn.disabled = false;
+                        if (saveNextBtn) saveNextBtn.disabled = false;
+
+                        if (saveIcon) saveIcon.classList.remove('hidden');
+                        if (saveText) saveText.textContent = 'Save';
+                        if (saveSpinner) saveSpinner.classList.add('hidden');
+
+                        if (saveNextIcon) saveNextIcon.classList.remove('hidden');
+                        if (saveNextText) saveNextText.textContent = 'Save & Next';
+                        if (saveNextSpinner) saveNextSpinner.classList.add('hidden');
                     }
                 }
 
