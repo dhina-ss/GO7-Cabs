@@ -1159,7 +1159,7 @@
 
                 incomeInput.addEventListener('input', updateModalSummary);
 
-                async function loadTripsFromDB(search = '', startDate = '', endDate = '') {
+                const loadTripsFromDB = async function(search = '', startDate = '', endDate = '') {
                     try {
                         let url = '/api/trips?';
                         if (search) url += `search=${encodeURIComponent(search)}&`;
@@ -1173,7 +1173,8 @@
                     } catch (err) {
                         console.warn('Could not load trips from DB:', err);
                     }
-                }
+                };
+                window.loadTripsFromDB = loadTripsFromDB;
 
                 function renderTripsList(trips) {
                     if (!tripListContainer) return;
@@ -1816,7 +1817,9 @@
             });
 
             // Initial load of trips from DB
-            loadTripsFromDB();
+            if (typeof window.loadTripsFromDB === 'function') {
+                window.loadTripsFromDB();
+            }
         });
     </script>
 </body>
