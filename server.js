@@ -274,6 +274,59 @@ app.post('/api/trips', async (req, res) => {
     }
 });
 
+// 8. Live Charts Data from Neon DB
+app.get('/api/charts', async (req, res) => {
+    try {
+        const expenseRes = await pool.query(`
+            SELECT 
+                COALESCE(SUM(fuel), 0) as fuel,
+                COALESCE(SUM(tolls), 0) as tolls,
+                COALESCE(SUM(allowance), 0) as allowance,
+                COALESCE(SUM(others), 0) as others
+            FROM trips
+        `);
+
+        const trendRes = await pool.query(`
+            SELECT 
+                TO_CHAR(trip_date, 'Dy') as day_name,
+                trip_date,
+                COALESCE(SUM(income), 0) as earnings,
+                COALESCE(SUM(fuel + tolls + allowance + others), 0) as expenses
+            FROM trips
+            GROUP BY trip_date
+            ORDER BY trip_date ASC
+            LIMIT 7
+        `);
+
+        const expRow = expenseRes.rows[0];
+        const fuel = parseFloat(expRow.fuel);
+        const tolls = parseFloat(expRow.tolls);
+        const allowance = parseFloat(expRow.allowance);
+        const others = parseFloat(expRow.others);
+
+        res.json({
+            success: true,
+            data: {
+                expenseBreakdown: { fuel, tolls, allowance, others },
+                trend: trendRes.rows.map(r => ({
+                    day: r.day_name || 'Day',
+                    earnings: parseFloat(r.earnings),
+                    expenses: parseFloat(r.expenses)
+                }))
+            }
+        });
+    } catch (err) {
+        console.error('API /api/charts Error:', err.message);
+        res.json({
+            success: true,
+            data: {
+                expenseBreakdown: { fuel: 0, tolls: 0, allowance: 0, others: 0 },
+                trend: []
+            }
+        });
+    }
+});
+
 // Fallback to home.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'home.html'));

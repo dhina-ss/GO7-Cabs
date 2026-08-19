@@ -16,6 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -245,99 +246,103 @@
         </a>
     </nav>
     <script>
-        // Chart.js Configuration
-        const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        };
+    <script>
+        let lineChartInstance = null;
+        let donutChartInstance = null;
 
-        // Line Chart (Earnings vs Expenses)
-        const lineCtx = document.getElementById('lineChart').getContext('2d');
-        new Chart(lineCtx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [
-                    {
-                        label: 'Earnings',
-                        data: [45000, 52000, 48000, 61000, 59000, 72000, 68000],
-                        borderColor: '#004ac6', // primary
-                        backgroundColor: 'rgba(0, 74, 198, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Expenses',
-                        data: [20000, 25000, 22000, 28000, 26000, 31000, 29000],
-                        borderColor: '#ba1a1a', // error
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        tension: 0.4,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                ...commonOptions,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function (value) {
-                                return '₹' + value / 1000 + 'k';
-                            },
-                            font: { size: 10 }
+        function initCharts(trendData, expenseData) {
+            const lineCanvas = document.getElementById('lineChart');
+            const donutCanvas = document.getElementById('donutChart');
+            if (!lineCanvas || !donutCanvas) return;
+
+            const lineCtx = lineCanvas.getContext('2d');
+            const donutCtx = donutCanvas.getContext('2d');
+
+            const labels = trendData && trendData.length > 0 ? trendData.map(t => t.day) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const earnings = trendData && trendData.length > 0 ? trendData.map(t => t.earnings) : [0, 0, 0, 0, 0, 0, 0];
+            const expenses = trendData && trendData.length > 0 ? trendData.map(t => t.expenses) : [0, 0, 0, 0, 0, 0, 0];
+
+            if (lineChartInstance) lineChartInstance.destroy();
+            lineChartInstance = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Earnings',
+                            data: earnings,
+                            borderColor: '#004ac6',
+                            backgroundColor: 'rgba(0, 74, 198, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
                         },
-                        grid: { color: '#f2f4f6' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 10 } }
+                        {
+                            label: 'Expenses',
+                            data: expenses,
+                            borderColor: '#ba1a1a',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) { return '₹' + value; },
+                                font: { size: 10 }
+                            },
+                            grid: { color: '#f2f4f6' }
+                        },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
                     }
                 }
-            }
-        });
+            });
 
-        // Donut Chart (Expense Breakdown)
-        const donutCtx = document.getElementById('donutChart').getContext('2d');
-        new Chart(donutCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Fuel', 'Maintenance', 'Tolls', 'Allowances'],
-                datasets: [{
-                    data: [45, 25, 15, 15],
-                    backgroundColor: [
-                        '#004ac6', // primary
-                        '#4a68eb', // secondary
-                        '#7588ff', // tertiary
-                        '#c4cdff'  // outline-variant
-                    ],
-                    borderWidth: 0,
-                    cutout: '70%'
-                }]
-            },
-            options: {
-                ...commonOptions,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'right',
-                        labels: {
-                            boxWidth: 10,
-                            font: { size: 10 }
+            const fuel = expenseData ? (expenseData.fuel || 0) : 0;
+            const tolls = expenseData ? (expenseData.tolls || 0) : 0;
+            const allowance = expenseData ? (expenseData.allowance || 0) : 0;
+            const others = expenseData ? (expenseData.others || 0) : 0;
+
+            const hasExpense = (fuel + tolls + allowance + others) > 0;
+            const donutLabels = hasExpense ? ['Fuel', 'Tolls', 'Allowance', 'Others'] : ['No Expenses'];
+            const donutValues = hasExpense ? [fuel, tolls, allowance, others] : [1];
+            const donutColors = hasExpense ? ['#004ac6', '#ba1a1a', '#e06d00', '#7588ff'] : ['#e2e8f0'];
+
+            if (donutChartInstance) donutChartInstance.destroy();
+            donutChartInstance = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: donutLabels,
+                    datasets: [{
+                        data: donutValues,
+                        backgroundColor: donutColors,
+                        borderWidth: 0,
+                        cutout: '70%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: { boxWidth: 10, font: { size: 10 } }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
-        // Fetch Live Stats from Neon Database
+        // Fetch Live Stats & Charts from Neon Database
         async function fetchLiveStats() {
             try {
                 const res = await fetch('/api/stats');
@@ -354,8 +359,17 @@
                     if (expEl) expEl.textContent = '₹' + d.total_expense.toLocaleString('en-IN');
                     if (netEl) netEl.textContent = '₹' + d.net_profit.toLocaleString('en-IN');
                 }
+
+                const chartRes = await fetch('/api/charts');
+                const chartJson = await chartRes.json();
+                if (chartJson.success && chartJson.data) {
+                    initCharts(chartJson.data.trend || [], chartJson.data.expenseBreakdown || {});
+                } else {
+                    initCharts([], {});
+                }
             } catch (e) {
-                console.warn('Could not fetch stats from database:', e);
+                console.warn('Could not fetch stats/charts from database:', e);
+                initCharts([], {});
             }
         }
         fetchLiveStats();
