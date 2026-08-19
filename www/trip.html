@@ -1364,10 +1364,16 @@
             // Trip Details Card Modal Controller
             const detailsModal = document.getElementById('trip-details-modal');
             const closeDetailsBtn = document.getElementById('close-trip-details-btn');
+
+            const closeTripDetailsModal = () => {
+                if (detailsModal) detailsModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            };
+
             if (closeDetailsBtn && detailsModal) {
-                closeDetailsBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
+                closeDetailsBtn.addEventListener('click', closeTripDetailsModal);
                 detailsModal.addEventListener('click', (e) => {
-                    if (e.target === detailsModal) detailsModal.classList.add('hidden');
+                    if (e.target === detailsModal) closeTripDetailsModal();
                 });
             }
 
@@ -1449,7 +1455,7 @@
                 const editBtn = document.getElementById('detail-edit-btn');
                 if (editBtn) {
                     editBtn.onclick = () => {
-                        detailsModal.classList.add('hidden');
+                        closeTripDetailsModal();
                         openEditTripModal(t.id);
                     };
                 }
@@ -1457,12 +1463,13 @@
                 const deleteBtn = document.getElementById('detail-delete-btn');
                 if (deleteBtn) {
                     deleteBtn.onclick = () => {
-                        detailsModal.classList.add('hidden');
+                        closeTripDetailsModal();
                         deleteTrip(t.id, t.driver_name);
                     };
                 }
 
                 detailsModal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
             };
 
             let pendingDeleteTripId = null;
@@ -1474,11 +1481,15 @@
                 pendingDeleteTripId = id;
                 const targetEl = document.getElementById('delete-trip-driver-name');
                 if (targetEl) targetEl.textContent = driverName;
-                if (deleteTripModal) deleteTripModal.classList.remove('hidden');
+                if (deleteTripModal) {
+                    deleteTripModal.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden');
+                }
             };
 
             const closeDeleteTripModal = () => {
                 if (deleteTripModal) deleteTripModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
                 pendingDeleteTripId = null;
             };
 
