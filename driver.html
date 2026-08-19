@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>GO7 Cabs - Drivers</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#004ac6">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="go7-logo.png">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#505f76",
+                        "inverse-primary": "#b4c5ff",
+                        "on-tertiary-container": "#eef0ff",
+                        "on-secondary-container": "#54647a",
+                        "tertiary": "#4d556b",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#00174b",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f2f4f6",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-container": "#656d84",
+                        "primary-fixed": "#dbe1ff",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#d0e1fb",
+                        "secondary-fixed": "#d3e4fe",
+                        "surface-bright": "#f7f9fb",
+                        "surface-variant": "#e0e3e5",
+                        "on-primary-container": "#eeefff",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-error-container": "#93000a",
+                        "surface": "#f7f9fb",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-background": "#191c1e",
+                        "tertiary-fixed": "#dae2fd",
+                        "primary": "#004ac6",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "outline": "#737686",
+                        "on-surface-variant": "#434655",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#2563eb",
+                        "outline-variant": "#c3c6d7",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2d3133",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-tint": "#0053db"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1440px",
+                        "stack-md": "16px",
+                        "card-padding": "24px",
+                        "gutter": "24px",
+                        "margin-x": "32px",
+                        "stack-sm": "8px",
+                        "stack-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "currency-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "currency-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            /* Level 0 Background */
+        }
+
+        /* Custom Utilities for smooth layout */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Glassmorphism utility for floating actions/modals if needed */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-background font-body-md antialiased flex justify-center w-full">
+    <div class="w-full max-w-md min-h-screen bg-surface flex flex-col relative overflow-hidden shadow-2xl">
+        <!-- Top App Bar (Mobile) -->
+        <header
+            class="fixed top-0 left-0 w-full z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant flex justify-between items-center h-16 px-4 max-w-md left-1/2 -translate-x-1/2">
+            <div class="flex items-center gap-3">
+                <img src="go7-logo.png" alt="Go 7 Logo" class="h-9 w-auto object-contain" />
+            </div>
+        </header>
+        <!-- Main Content Canvas -->
+        <main class="pt-20 px-4 pb-24 space-y-6 flex-1 overflow-y-auto">
+            <!-- Page Header & Actions -->
+            <div class="flex flex-col space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline-lg-mobile text-2xl font-bold text-on-surface">Drivers</h2>
+                        <p class="text-xs text-on-surface-variant">Add and manage driver details</p>
+                    </div>
+                    <button id="open-add-driver-btn"
+                        class="flex items-center gap-1.5 bg-primary text-on-primary px-4 py-2.5 rounded-full shadow-md hover:bg-primary/90 transition-all active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">person_add</span>
+                        <span class="text-xs font-semibold">Add Driver</span>
+                    </button>
+                </div>
+                <!-- Search Bar -->
+                <div class="relative w-full">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                    <input id="search-driver-input"
+                        class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 font-body-md text-body-md placeholder:text-on-surface-variant outline-none shadow-sm"
+                        placeholder="Search drivers by name or ID..." type="text" />
+                </div>
+            </div>
+            <!-- Bento Grid Summary Section -->
+            <section class="grid grid-cols-2 gap-4">
+                <!-- Total Drivers -->
+                <div
+                    class="col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)] flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-xl"></div>
+                    <div class="flex justify-between items-start z-10">
+                        <div class="flex items-center gap-2 text-on-surface-variant mb-1">
+                            <span class="material-symbols-outlined text-[20px]">group</span>
+                            <span class="font-label-md text-label-md">Total Drivers</span>
+                        </div>
+                        <div class="bg-surface-container rounded-full px-2 py-0.5 flex items-center gap-1 text-primary">
+                            <span class="material-symbols-outlined text-[14px]">trending_up</span>
+                            <span class="font-label-md text-[12px]">+12%</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 z-10">
+                        <span id="total-drivers-count"
+                            class="font-display-lg text-display-lg text-on-surface">0</span>
+                    </div>
+                </div>
+            </section>
+            <!-- Driver List -->
+            <div id="driver-list-container" class="flex flex-col space-y-3">
+            </div>
+        </main>
+        <!-- Bottom Navigation Bar -->
+        <!-- Floating Rounded Bottom Navigation Bar (Mobile) -->
+        <nav
+            class="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm h-16 bg-surface/95 backdrop-blur-md border border-outline-variant/60 rounded-full shadow-lg flex justify-around items-center z-50 transition-all">
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="home.html">
+                <span class="material-symbols-outlined">home</span>
+                <span class="text-[10px]">Home</span>
+            </a>
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="trip.html">
+                <span class="material-symbols-outlined">route</span>
+                <span class="text-[10px]">Trip</span>
+            </a>
+            <a class="flex flex-col items-center gap-1 text-primary p-2 transition-transform active:scale-95"
+                href="driver.html">
+                <span class="material-symbols-outlined filled">person_pin</span>
+                <span class="text-[10px] font-semibold">Driver</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Add Driver Modal Dialog -->
+    <div id="add-driver-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div
+            class="bg-surface-container-lowest w-full max-w-md rounded-2xl border border-outline-variant shadow-2xl p-6 space-y-4 relative">
+            <div class="flex justify-between items-center border-b border-outline-variant/40 pb-3">
+                <h3 class="text-lg font-bold text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">person_add</span>
+                    Add New Driver
+                </h3>
+                <button type="button" id="close-add-driver-modal"
+                    class="w-8 h-8 flex justify-center items-center hover:text-on-surface p-1 bg-slate-100 rounded-full hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <form id="add-driver-form" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Driver Name <span
+                            class="text-error">*</span></label>
+                    <input type="text" id="new-driver-name" placeholder="e.g. Vikram Singh" required
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Mobile Number <span
+                            class="text-error">*</span></label>
+                    <input type="tel" id="new-driver-mobile" placeholder="e.g. +91 98765 43210" required
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">License Number <span
+                            class="text-error">*</span></label>
+                    <input type="text" id="new-driver-license" placeholder="e.g. TN-1420110012345" required
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Aadhaar Number <span
+                            class="text-error">*</span></label>
+                    <input type="text" id="new-driver-aadhar" placeholder="e.g. 5482 9102 3341" required
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Address <span
+                            class="text-error">*</span></label>
+                    <textarea id="new-driver-address" rows="2" placeholder="e.g. Flat 302, Green Park, MG Road, Pune"
+                        required
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" id="cancel-add-driver-modal"
+                        class="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-md transition-colors">
+                        Save Driver
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Add Driver Modal & Live Search Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const openAddBtn = document.getElementById('open-add-driver-btn');
+            const closeAddBtn = document.getElementById('close-add-driver-modal');
+            const cancelAddBtn = document.getElementById('cancel-add-driver-modal');
+            const addModal = document.getElementById('add-driver-modal');
+            const addForm = document.getElementById('add-driver-form');
+            const driverListContainer = document.getElementById('driver-list-container');
+            const searchInput = document.getElementById('search-driver-input');
+            const totalDriversCount = document.getElementById('total-drivers-count');
+
+            async function loadDriversFromDB(searchQuery = '') {
+                try {
+                    let url = '/api/drivers';
+                    if (searchQuery) url += `?search=${encodeURIComponent(searchQuery)}`;
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json.success && Array.isArray(json.data)) {
+                        renderDriversList(json.data);
+                    }
+                } catch (err) {
+                    console.warn('Could not fetch drivers from DB:', err);
+                }
+            }
+
+            function renderDriversList(drivers) {
+                if (!driverListContainer) return;
+                driverListContainer.innerHTML = '';
+
+                if (drivers.length === 0) {
+                    driverListContainer.innerHTML = `
+                        <div class="text-center py-12 text-on-surface-variant text-sm font-medium">
+                            <span class="material-symbols-outlined text-4xl text-outline mb-2 block">person_off</span>
+                            No drivers registered in database
+                        </div>
+                    `;
+                    return;
+                }
+
+                drivers.forEach(d => {
+                    const card = document.createElement('a');
+                    const earningsStr = parseFloat(d.total_earnings || 0).toLocaleString('en-IN');
+                    card.href = `driver_details.html?id=${encodeURIComponent(d.id)}&name=${encodeURIComponent(d.name)}&trips=${d.trips_count}&earnings=${earningsStr}`;
+                    card.className = 'block cursor-pointer bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-primary/50 transition-colors flex flex-col gap-3';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                <div>
+                                    <h3 class="font-headline-md text-[16px] leading-tight text-on-surface font-semibold">${d.name}</h3>
+                                    <p class="text-[11px] text-on-surface-variant">ID: ${d.id} ${d.phone ? '• ' + d.phone : ''}</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] text-primary font-medium flex items-center">View Profile <span class="material-symbols-outlined text-[14px] ml-0.5">chevron_right</span></span>
+                        </div>
+                        <div class="h-px w-full bg-outline-variant/30"></div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex flex-col">
+                                <span class="font-body-sm text-[12px] text-on-surface-variant">Total Trips</span>
+                                <span class="font-label-md text-label-md text-on-surface">${d.trips_count || 0}</span>
+                            </div>
+                            <div class="flex flex-col text-right">
+                                <span class="font-body-sm text-[12px] text-on-surface-variant">Total Earnings</span>
+                                <span class="font-label-md text-label-md text-on-surface">₹${earningsStr}</span>
+                            </div>
+                        </div>
+                    `;
+                    driverListContainer.appendChild(card);
+                });
+            }
+
+            // Modal Handlers
+            if (openAddBtn && addModal) {
+                const openModal = () => addModal.classList.remove('hidden');
+                const closeModal = () => {
+                    addModal.classList.add('hidden');
+                    if (addForm) addForm.reset();
+                };
+
+                openAddBtn.addEventListener('click', openModal);
+                if (closeAddBtn) closeAddBtn.addEventListener('click', closeModal);
+                if (cancelAddBtn) cancelAddBtn.addEventListener('click', closeModal);
+
+                addModal.addEventListener('click', (e) => {
+                    if (e.target === addModal) closeModal();
+                });
+
+                if (addForm) {
+                    addForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const name = document.getElementById('new-driver-name').value.trim();
+                        const mobile = document.getElementById('new-driver-mobile').value.trim();
+
+                        try {
+                            const res = await fetch('/api/drivers', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name, phone: mobile })
+                            });
+                            const json = await res.json();
+                            if (json.success) {
+                                closeModal();
+                                loadDriversFromDB();
+                            }
+                        } catch (err) {
+                            console.error('Error saving driver:', err);
+                        }
+                    });
+                }
+            }
+
+            // Search
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    loadDriversFromDB(e.target.value);
+                });
+            }
+
+            // Initial load
+            loadDriversFromDB();
+        });
+    </script>
+</body>
+
+</html>

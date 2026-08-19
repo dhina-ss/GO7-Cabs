@@ -1,0 +1,44 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE & Editor Files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Capacitor & Android Build Artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/.idea/
+android/local.properties
+android/app/libs/
+android/*.iml
+
+# Zip Archives & Local Task Logs
+*.zip
+*.log
+
+# Server scratch files
+scratch/

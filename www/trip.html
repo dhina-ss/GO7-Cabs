@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>GO7 Cabs - Trips</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#004ac6">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="go7-logo.png">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#eeefff",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "on-secondary-fixed": "#0b1c30",
+                        "outline": "#737686",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "inverse-surface": "#2d3133",
+                        "primary-fixed": "#dbe1ff",
+                        "primary": "#004ac6",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#54647a",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "background": "#f7f9fb",
+                        "primary-container": "#2563eb",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "tertiary-container": "#656d84",
+                        "secondary-container": "#d0e1fb",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-bright": "#f7f9fb",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-surface": "#191c1e",
+                        "surface-container-high": "#e6e8ea",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-tint": "#0053db",
+                        "secondary": "#505f76",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary": "#4d556b",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-primary-fixed": "#00174b",
+                        "surface-dim": "#d8dadc",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#eef0ff",
+                        "on-tertiary-fixed": "#131b2e",
+                        "secondary-fixed": "#d3e4fe",
+                        "on-surface-variant": "#434655",
+                        "tertiary-fixed": "#dae2fd",
+                        "surface-container-highest": "#e0e3e5",
+                        "outline-variant": "#c3c6d7",
+                        "surface": "#f7f9fb",
+                        "on-background": "#191c1e",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-background font-body-md min-h-screen flex justify-center w-full">
+    <div class="w-full max-w-md min-h-screen bg-surface flex flex-col relative overflow-hidden shadow-2xl">
+        <!-- Top App Bar (Mobile) -->
+        <header
+            class="fixed top-0 left-0 w-full z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant flex justify-between items-center h-16 px-4 max-w-md left-1/2 -translate-x-1/2">
+            <div class="flex items-center gap-3">
+                <img src="go7-logo.png" alt="Go 7 Logo" class="h-9 w-auto object-contain" />
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="pt-20 px-4 py-24 space-y-6 flex-1 overflow-y-auto">
+            <!-- Page Header & Add Trip Button -->
+            <div class="flex flex-col space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline-lg-mobile text-2xl font-bold text-on-surface">Saved Trips</h2>
+                        <p class="text-xs text-on-surface-variant">Track & manage trip records</p>
+                    </div>
+                    <button id="open-add-trip-btn"
+                        class="flex items-center gap-1.5 bg-primary text-on-primary px-4 py-2.5 rounded-full shadow-md hover:bg-primary/90 transition-all active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">route</span>
+                        <span class="text-xs font-semibold">Add Trip</span>
+                    </button>
+                </div>
+
+                <!-- Search & Actions Toolbar Bar -->
+                <div class="flex items-center gap-2 w-full">
+                    <div class="relative flex-1">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                        <input id="search-trip-input" type="text" placeholder="Search driver, date..."
+                            class="w-full pl-10 pr-3 py-2.5 bg-surface-container-lowest border border-outline-variant/60 rounded-xl focus:ring-2 focus:ring-primary text-sm placeholder:text-on-surface-variant outline-none shadow-sm transition-all" />
+                    </div>
+                    <button id="toolbar-date-filter-btn" title="Filter by Date Range"
+                        class="w-10 h-10 bg-surface-container-lowest border border-outline-variant/60 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all shadow-sm active:scale-95 shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">calendar_today</span>
+                    </button>
+                    <button id="toolbar-download-btn" title="Download Report CSV"
+                        class="w-10 h-10 bg-surface-container-lowest border border-outline-variant/60 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all shadow-sm active:scale-95 shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">download</span>
+                    </button>
+                </div>
+            </div>
+
+
+
+            <!-- Saved Trips List -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-sm font-bold text-on-surface">Recent Trip Records</h3>
+                </div>
+
+                <div id="trip-list-container" class="space-y-3">
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Rounded Bottom Navigation Bar (Mobile) -->
+        <nav
+            class="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm h-16 bg-surface/95 backdrop-blur-md border border-outline-variant/60 rounded-full shadow-lg flex justify-around items-center z-50 transition-all">
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="home.html">
+                <span class="material-symbols-outlined">home</span>
+                <span class="text-[10px]">Home</span>
+            </a>
+            <a class="flex flex-col items-center gap-1 text-primary p-2 transition-transform active:scale-95"
+                href="trip.html">
+                <span class="material-symbols-outlined filled">route</span>
+                <span class="text-[10px] font-semibold">Trip</span>
+            </a>
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="driver.html">
+                <span class="material-symbols-outlined">person_pin</span>
+                <span class="text-[10px]">Driver</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Add Trip Modal Dialog -->
+    <div id="add-trip-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div
+            class="bg-surface-container-lowest w-full max-w-md rounded-2xl border border-outline-variant shadow-2xl p-6 relative my-8 max-h-[90vh] flex flex-col">
+            <!-- Pinned Header -->
+            <div class="flex justify-between items-center border-b border-outline-variant/40 pb-3 shrink-0">
+                <h3 class="text-lg font-bold text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">route</span>
+                    Add New Trip
+                </h3>
+                <button type="button" id="close-add-trip-modal"
+                    class="w-8 h-8 flex items-center justify-center hover:text-on-surface p-1 rounded-full bg-slate-100 hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <!-- Scrollable Form Body (Hidden Scrollbar) -->
+            <form id="add-trip-form" class="space-y-4 overflow-y-auto hide-scrollbar flex-1 pt-4 px-1">
+                <!-- Trip Date -->
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Trip Date <span
+                            class="text-error">*</span></label>
+                    <input type="date" id="new-trip-date" required value="2023-10-24"
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+
+                <!-- Trip Type Custom Dropdown -->
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Trip Type <span
+                            class="text-error">*</span></label>
+                    <div class="relative w-full" id="type-dropdown-wrapper">
+                        <button type="button" id="type-dropdown-btn"
+                            class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface flex items-center justify-between outline-none focus:ring-2 focus:ring-primary transition-all">
+                            <span id="type-dropdown-label" class="font-medium">1</span>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200"
+                                id="type-dropdown-arrow">expand_more</span>
+                        </button>
+                        <input type="hidden" id="new-trip-type" value="1" required />
+
+                        <!-- Custom Options Menu with Rounded Border Radius -->
+                        <div id="type-dropdown-menu"
+                            class="hidden absolute top-[calc(100%+6px)] left-0 w-full p-1.5 rounded-2xl border border-outline-variant/80 bg-surface-container-lowest shadow-2xl z-50 flex flex-col gap-1 max-h-52 overflow-y-auto hide-scrollbar">
+                            <div data-type="1"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none bg-primary/10 text-primary">
+                                <span>1</span>
+                                <span class="material-symbols-outlined text-sm check-mark">check</span>
+                            </div>
+                            <div data-type="2"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>2</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-type="3"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>3</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-type="4"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>4</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-type="5"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>5</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-type="6"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>6</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-type="Out"
+                                class="type-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>Out</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Select Driver Custom Dropdown -->
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Driver Name <span
+                            class="text-error">*</span></label>
+                    <div class="relative w-full" id="driver-dropdown-wrapper">
+                        <button type="button" id="driver-dropdown-btn"
+                            class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface flex items-center justify-between outline-none focus:ring-2 focus:ring-primary transition-all">
+                            <span id="driver-dropdown-label" class="font-medium">Suresh Patel</span>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200"
+                                id="driver-dropdown-arrow">expand_more</span>
+                        </button>
+                        <input type="hidden" id="new-trip-driver" value="Suresh Patel" required />
+
+                        <!-- Custom Options Menu with Rounded Border Radius -->
+                        <div id="driver-dropdown-menu"
+                            class="hidden absolute top-[calc(100%+6px)] left-0 w-full p-1.5 rounded-2xl border border-outline-variant/80 bg-surface-container-lowest shadow-2xl z-50 flex flex-col gap-1 max-h-52 overflow-y-auto hide-scrollbar">
+                            <div data-driver="Suresh Patel"
+                                class="driver-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none bg-primary/10 text-primary">
+                                <span>Suresh Patel</span>
+                                <span class="material-symbols-outlined text-sm check-mark">check</span>
+                            </div>
+                            <div data-driver="Rahul Sharma"
+                                class="driver-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>Rahul Sharma</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-driver="Amit Kumar"
+                                class="driver-option rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all flex items-center justify-between font-medium select-none">
+                                <span>Amit Kumar</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- From & To Location Fields with Autocomplete Suggestion Dropdowns -->
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- From Location -->
+                    <div class="relative" id="from-location-wrapper">
+                        <label class="block text-xs font-semibold text-on-surface-variant mb-1">From Location <span
+                                class="text-error">*</span></label>
+                        <input type="text" id="new-trip-from" placeholder="e.g. Chennai" autocomplete="off" required
+                            class="w-full pl-3 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all" />
+                        <div id="from-suggestions-menu"
+                            class="hidden absolute top-[calc(100%+4px)] left-0 w-full p-1 rounded-2xl border border-outline-variant/80 bg-surface-container-lowest shadow-2xl z-50 flex flex-col gap-1 max-h-48 overflow-y-auto hide-scrollbar">
+                        </div>
+                    </div>
+
+                    <!-- To Location -->
+                    <div class="relative" id="to-location-wrapper">
+                        <label class="block text-xs font-semibold text-on-surface-variant mb-1">To Location <span
+                                class="text-error">*</span></label>
+                        <input type="text" id="new-trip-to" placeholder="e.g. Bangalore" autocomplete="off" required
+                            class="w-full pl-3 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all" />
+                        <div id="to-suggestions-menu"
+                            class="hidden absolute top-[calc(100%+4px)] left-0 w-full p-1 rounded-2xl border border-outline-variant/80 bg-surface-container-lowest shadow-2xl z-50 flex flex-col gap-1 max-h-48 overflow-y-auto hide-scrollbar">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Driver Income Amount -->
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Trip Income Amount (₹) <span
+                            class="text-error">*</span></label>
+                    <div class="relative">
+                        <span
+                            class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-semibold">₹</span>
+                        <input type="text" id="new-trip-income" placeholder="e.g. 5,000" required inputmode="decimal"
+                            class="w-full pl-7 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm text-on-surface focus:ring-2 focus:ring-primary outline-none amount-input" />
+                    </div>
+                </div>
+
+                <!-- Multi-Select Expense Dropdown Section -->
+                <div class="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant space-y-3">
+                    <label class="block text-xs font-semibold text-on-surface-variant">Expense Categories <span
+                            class="text-error">*</span></label>
+
+                    <!-- Custom Multi-Select Dropdown Button -->
+                    <div class="relative w-full" id="expense-dropdown-wrapper">
+                        <button type="button" id="expense-dropdown-btn"
+                            class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2.5 text-xs text-on-surface flex items-center justify-between outline-none focus:ring-2 focus:ring-primary transition-all">
+                            <span id="expense-dropdown-label" class="text-on-surface-variant">Select Expense
+                                Categories...</span>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200"
+                                id="expense-dropdown-arrow">expand_more</span>
+                        </button>
+
+                        <!-- Dropdown Options Menu -->
+                        <div id="expense-dropdown-menu"
+                            class="hidden absolute top-[calc(100%+6px)] left-0 w-full p-2 rounded-xl border border-outline-variant bg-surface-container-lowest shadow-xl z-50 flex flex-col gap-1 max-h-52 overflow-y-auto">
+                            <div data-expense="Fuel"
+                                class="expense-option rounded-lg px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between select-none">
+                                <span>Fuel</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-expense="Tolls"
+                                class="expense-option rounded-lg px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between select-none">
+                                <span>Tolls</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-expense="Allowance"
+                                class="expense-option rounded-lg px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between select-none">
+                                <span>Allowance</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-expense="Maintenance"
+                                class="expense-option rounded-lg px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between select-none">
+                                <span>Maintenance</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                            <div data-expense="Others"
+                                class="expense-option rounded-lg px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between select-none">
+                                <span>Others</span>
+                                <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Chips -->
+                    <div id="selected-expense-chips" class="flex flex-wrap gap-1.5 pt-1"></div>
+
+                    <!-- Dynamic Expense Input Fields Container -->
+                    <div id="dynamic-expense-fields" class="space-y-2 pt-1"></div>
+                </div>
+
+                <!-- Financial Live Summary -->
+                <div class="bg-primary/10 rounded-xl p-3 border border-primary/20 space-y-1.5 text-xs">
+                    <div class="flex justify-between text-on-surface-variant">
+                        <span>Total Income:</span>
+                        <span id="modal-summary-income" class="font-bold text-on-surface">₹0</span>
+                    </div>
+                    <div class="flex justify-between text-on-surface-variant">
+                        <span>Total Expenses:</span>
+                        <span id="modal-summary-expense" class="font-bold text-error">- ₹0</span>
+                    </div>
+                    <div class="pt-1 border-t border-outline-variant/40 flex justify-between font-bold text-sm">
+                        <span class="text-on-surface">Net Profit:</span>
+                        <span id="modal-summary-net" class="text-primary font-bold">₹0</span>
+                    </div>
+                </div>
+
+                <!-- Remarks -->
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Remarks</label>
+                    <textarea id="new-trip-remarks" rows="2" placeholder="Additional trip notes..."
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Saved Toast Banner -->
+                <div id="trip-saved-toast"
+                    class="hidden bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-sm">
+                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                    <span>Trip saved! Enter details for next trip.</span>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="flex flex-col gap-2 pt-1">
+                    <div class="flex gap-2.5">
+                        <button type="submit" id="save-trip-btn"
+                            class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-[18px]">check</span>
+                            Save
+                        </button>
+                        <button type="button" id="save-next-trip-btn"
+                            class="flex-1 py-2.5 rounded-xl bg-blue-50 text-primary font-semibold text-sm border border-primary/30 hover:bg-primary/10 transition-all active:scale-95 flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                            Save &amp; Next
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Date Range Picker Modal -->
+    <div id="date-filter-modal"
+        class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all duration-300">
+        <div
+            class="bg-surface-container-lowest w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-outline-variant/60 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div
+                class="px-5 py-4 border-b border-outline-variant/40 flex justify-between items-center bg-surface-bright shrink-0">
+                <div class="flex items-center gap-2">
+                    <button type="button" id="close-date-filter-modal"
+                        class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                    <h3 class="text-base font-bold text-on-surface">Select Date Range</h3>
+                </div>
+                <button type="button" id="clear-date-filter-btn"
+                    class="text-xs font-semibold text-primary hover:text-primary/90 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 transition-colors">
+                    Reset
+                </button>
+            </div>
+
+            <!-- Month Navigator Bar -->
+            <div
+                class="px-5 py-2.5 bg-surface-container-low border-b border-outline-variant/30 flex justify-between items-center shrink-0">
+                <button type="button" id="prev-month-btn"
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+                </button>
+                <span id="calendar-month-title" class="text-sm font-bold text-on-surface">October 2026</span>
+                <button type="button" id="next-month-btn"
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+                </button>
+            </div>
+
+            <!-- Days of Week Header Grid -->
+            <div
+                class="grid grid-cols-7 text-center px-4 py-2 text-xs font-bold text-on-surface-variant/70 border-b border-outline-variant/30 bg-surface-bright shrink-0">
+                <span>Su</span>
+                <span>Mo</span>
+                <span>Tu</span>
+                <span>We</span>
+                <span>Th</span>
+                <span>Fr</span>
+                <span>Sa</span>
+            </div>
+
+            <!-- Calendar Days Grid Container -->
+            <div class="px-4 py-3 overflow-y-auto flex-1 hide-scrollbar min-h-[260px]">
+                <div id="calendar-days-grid" class="grid grid-cols-7 text-center gap-y-1 text-xs font-medium"></div>
+            </div>
+
+            <!-- Selection Summary & Confirm Action Footer -->
+            <div class="p-4 bg-surface-bright border-t border-outline-variant/40 space-y-3 shrink-0">
+                <div
+                    class="flex items-center justify-between text-xs text-on-surface-variant bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/40">
+                    <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-primary text-[18px]">date_range</span>
+                        <span id="selected-range-text" class="font-bold text-on-surface">No dates selected</span>
+                    </div>
+                    <span id="range-days-count"
+                        class="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full hidden">0
+                        Days</span>
+                </div>
+
+                <button type="button" id="apply-date-filter-btn"
+                    class="w-full py-3 rounded-2xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-sm shadow-lg shadow-primary/25 transition-all active:scale-98 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    Apply Date Filter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modal & Live Calculations -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const addTripModal = document.getElementById('add-trip-modal');
+            const openAddTripBtn = document.getElementById('open-add-trip-btn');
+            const closeAddTripBtn = document.getElementById('close-add-trip-modal');
+            const cancelAddTripBtn = document.getElementById('cancel-add-trip-modal');
+            const addTripForm = document.getElementById('add-trip-form');
+
+            const tripListContainer = document.getElementById('trip-list-container');
+            const searchInput = document.getElementById('search-trip-input');
+
+            const incomeInput = document.getElementById('new-trip-income');
+            const expenseFields = document.querySelectorAll('.expense-field');
+
+            const summaryIncome = document.getElementById('modal-summary-income');
+            const summaryExpense = document.getElementById('modal-summary-expense');
+            const summaryNet = document.getElementById('modal-summary-net');
+
+            // Modal Controls
+            if (openAddTripBtn && addTripModal) {
+                openAddTripBtn.addEventListener('click', () => {
+                    addTripModal.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden');
+                });
+
+                const closeModal = () => {
+                    addTripModal.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                    addTripForm.reset();
+                    selectedExpenses.clear();
+                    for (let k in expenseAmounts) delete expenseAmounts[k];
+                    renderExpenseDropdownUI();
+                };
+
+                if (closeAddTripBtn) closeAddTripBtn.addEventListener('click', closeModal);
+                if (cancelAddTripBtn) cancelAddTripBtn.addEventListener('click', closeModal);
+
+                addTripModal.addEventListener('click', (e) => {
+                    if (e.target === addTripModal) {
+                        closeModal();
+                    }
+                });
+
+                // Currency Parser & Formatter (Minimum value = 0)
+                function parseNum(val) {
+                    if (!val) return 0;
+                    const clean = val.toString().replace(/[^0-9.]/g, '');
+                    const parsed = parseFloat(clean);
+                    return isNaN(parsed) || parsed < 0 ? 0 : parsed;
+                }
+
+                function formatIN(num) {
+                    return Math.max(0, num).toLocaleString('en-IN');
+                }
+
+                function setupAmountField(input) {
+                    if (!input) return;
+                    input.setAttribute('min', '0');
+
+                    // Prevent minus sign key
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === '-' || e.key === 'Minus') {
+                            e.preventDefault();
+                        }
+                    });
+
+                    // Remove minus sign if pasted/typed & update summary
+                    input.addEventListener('input', () => {
+                        if (input.value.includes('-')) {
+                            input.value = input.value.replace(/-/g, '');
+                        }
+                        updateModalSummary();
+                    });
+
+                    // Paste handler
+                    input.addEventListener('paste', (e) => {
+                        e.preventDefault();
+                        const text = (e.clipboardData || window.clipboardData).getData('text');
+                        const clean = text.replace(/[^0-9.]/g, '');
+                        input.value = clean ? parseNum(clean).toLocaleString('en-IN') : '';
+                        updateModalSummary();
+                    });
+                }
+
+                if (incomeInput) {
+                    setupAmountField(incomeInput);
+                }
+
+                // Custom Single-Select Dropdown Helper (Trip Type & Driver Name)
+                function setupSingleSelectDropdown(btnId, menuId, arrowId, labelId, hiddenInputId, optionClass, dataAttr) {
+                    const btn = document.getElementById(btnId);
+                    const menu = document.getElementById(menuId);
+                    const arrow = document.getElementById(arrowId);
+                    const label = document.getElementById(labelId);
+                    const hiddenInput = document.getElementById(hiddenInputId);
+                    const options = document.querySelectorAll(`.${optionClass}`);
+                    const wrapper = btn ? btn.closest('.relative') : null;
+
+                    if (btn && menu) {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const isHidden = menu.classList.contains('hidden');
+                            document.querySelectorAll('#type-dropdown-menu, #driver-dropdown-menu, #expense-dropdown-menu').forEach(m => m.classList.add('hidden'));
+                            if (isHidden) {
+                                menu.classList.remove('hidden');
+                                if (arrow) arrow.classList.add('rotate-180');
+                            } else {
+                                if (arrow) arrow.classList.remove('rotate-180');
+                            }
+                        });
+
+                        document.addEventListener('click', (e) => {
+                            if (wrapper && !wrapper.contains(e.target)) {
+                                menu.classList.add('hidden');
+                                if (arrow) arrow.classList.remove('rotate-180');
+                            }
+                        });
+
+                        options.forEach(opt => {
+                            opt.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const val = opt.getAttribute(dataAttr);
+                                if (hiddenInput) hiddenInput.value = val;
+                                if (label) label.textContent = val;
+
+                                options.forEach(o => {
+                                    const check = o.querySelector('.check-mark');
+                                    if (o === opt) {
+                                        o.classList.add('bg-primary/10', 'text-primary');
+                                        if (check) check.classList.remove('opacity-0');
+                                    } else {
+                                        o.classList.remove('bg-primary/10', 'text-primary');
+                                        if (check) check.classList.add('opacity-0');
+                                    }
+                                });
+
+                                menu.classList.add('hidden');
+                                if (arrow) arrow.classList.remove('rotate-180');
+                            });
+                        });
+                    }
+                }
+
+                setupSingleSelectDropdown('type-dropdown-btn', 'type-dropdown-menu', 'type-dropdown-arrow', 'type-dropdown-label', 'new-trip-type', 'type-option', 'data-type');
+
+                // Popular Cities Autocomplete Suggestions Logic
+                const popularCities = [
+                    "Chennai", "Bangalore", "Coimbatore", "Madurai", "Trichy",
+                    "Salem", "Pondicherry", "Hyderabad", "Kochi", "Trivandrum",
+                    "Vellore", "Tirunelveli", "Erode", "Thanjavur", "Kanchipuram",
+                    "Nagercoil", "Tuticorin", "Hosur", "Pune", "Mumbai", "Delhi"
+                ];
+
+                function setupLocationAutocomplete(inputId, menuId) {
+                    const inputEl = document.getElementById(inputId);
+                    const menuEl = document.getElementById(menuId);
+                    if (!inputEl || !menuEl) return;
+
+                    function renderSuggestions(filterText = '') {
+                        const query = filterText.toLowerCase().trim();
+                        if (query.length < 3) {
+                            menuEl.classList.add('hidden');
+                            menuEl.innerHTML = '';
+                            return;
+                        }
+
+                        const filtered = popularCities.filter(c => c.toLowerCase().includes(query));
+
+                        menuEl.innerHTML = '';
+                        if (filtered.length === 0) {
+                            menuEl.classList.add('hidden');
+                            return;
+                        }
+
+                        filtered.forEach(city => {
+                            const item = document.createElement('div');
+                            item.className = 'rounded-xl px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-all font-medium select-none';
+                            item.innerHTML = `<span>${city}</span>`;
+
+                            item.addEventListener('mousedown', (e) => {
+                                e.preventDefault();
+                                inputEl.value = city;
+                                menuEl.classList.add('hidden');
+                            });
+
+                            menuEl.appendChild(item);
+                        });
+
+                        menuEl.classList.remove('hidden');
+                    }
+
+                    inputEl.addEventListener('focus', () => {
+                        renderSuggestions(inputEl.value);
+                    });
+
+                    inputEl.addEventListener('input', () => {
+                        renderSuggestions(inputEl.value);
+                    });
+
+                    inputEl.addEventListener('blur', () => {
+                        setTimeout(() => {
+                            menuEl.classList.add('hidden');
+                        }, 150);
+                    });
+                }
+
+                setupLocationAutocomplete('new-trip-from', 'from-suggestions-menu');
+                setupLocationAutocomplete('new-trip-to', 'to-suggestions-menu');
+                setupSingleSelectDropdown('driver-dropdown-btn', 'driver-dropdown-menu', 'driver-dropdown-arrow', 'driver-dropdown-label', 'new-trip-driver', 'driver-option', 'data-driver');
+
+                // Multi-Select Expense Dropdown Logic
+                const expenseBtn = document.getElementById('expense-dropdown-btn');
+                const expenseMenu = document.getElementById('expense-dropdown-menu');
+                const expenseArrow = document.getElementById('expense-dropdown-arrow');
+                const expenseChipsContainer = document.getElementById('selected-expense-chips');
+                const dynamicFieldsContainer = document.getElementById('dynamic-expense-fields');
+                const expenseWrapper = document.getElementById('expense-dropdown-wrapper');
+                const expenseOptions = document.querySelectorAll('.expense-option');
+
+                const selectedExpenses = new Set();
+                const expenseAmounts = {};
+
+                if (expenseBtn && expenseMenu) {
+                    function toggleExpenseMenu(show) {
+                        const isOpen = show !== undefined ? show : expenseMenu.classList.contains('hidden');
+                        document.querySelectorAll('#type-dropdown-menu, #driver-dropdown-menu').forEach(m => m.classList.add('hidden'));
+                        if (isOpen) {
+                            expenseMenu.classList.remove('hidden');
+                            if (expenseArrow) expenseArrow.classList.add('rotate-180');
+                        } else {
+                            expenseMenu.classList.add('hidden');
+                            if (expenseArrow) expenseArrow.classList.remove('rotate-180');
+                        }
+                    }
+
+                    expenseBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleExpenseMenu();
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (expenseWrapper && !expenseWrapper.contains(e.target)) {
+                            toggleExpenseMenu(false);
+                        }
+                    });
+
+                    expenseOptions.forEach(opt => {
+                        opt.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const key = opt.getAttribute('data-expense');
+                            if (selectedExpenses.has(key)) {
+                                selectedExpenses.delete(key);
+                            } else {
+                                selectedExpenses.add(key);
+                            }
+                            renderExpenseDropdownUI();
+                        });
+                    });
+                }
+
+                function renderExpenseDropdownUI() {
+                    // Highlight selected dropdown options
+                    expenseOptions.forEach(opt => {
+                        const key = opt.getAttribute('data-expense');
+                        const check = opt.querySelector('.check-mark');
+                        if (selectedExpenses.has(key)) {
+                            opt.classList.add('bg-primary/10', 'text-primary', 'font-semibold');
+                            if (check) check.classList.remove('opacity-0');
+                        } else {
+                            opt.classList.remove('bg-primary/10', 'text-primary', 'font-semibold');
+                            if (check) check.classList.add('opacity-0');
+                        }
+                    });
+
+                    // Render selected chips
+                    if (expenseChipsContainer) {
+                        expenseChipsContainer.innerHTML = '';
+                        selectedExpenses.forEach(key => {
+                            const chip = document.createElement('span');
+                            chip.className = 'inline-flex items-center gap-1 bg-primary text-white text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm';
+                            chip.innerHTML = `
+                                ${key}
+                                <button type="button" class="hover:text-red-200 transition-colors ml-0.5" data-remove="${key}">
+                                    <span class="material-symbols-outlined text-[14px]">close</span>
+                                </button>
+                            `;
+                            chip.querySelector('button').addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                selectedExpenses.delete(key);
+                                renderExpenseDropdownUI();
+                            });
+                            expenseChipsContainer.appendChild(chip);
+                        });
+                    }
+
+                    // Render dynamic amount input fields for selected expenses
+                    if (dynamicFieldsContainer) {
+                        dynamicFieldsContainer.innerHTML = '';
+                        selectedExpenses.forEach(key => {
+                            const row = document.createElement('div');
+                            row.className = 'flex items-center justify-between gap-3 bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/60';
+                            row.innerHTML = `
+                                <span class="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-primary"></span> ${key}
+                                </span>
+                                <div class="relative w-32">
+                                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs font-semibold">₹</span>
+                                    <input type="text" data-expense-key="${key}" value="${expenseAmounts[key] || ''}" placeholder="0" inputmode="decimal"
+                                        class="w-full pl-6 pr-2.5 py-1.5 bg-surface-container-low border border-outline-variant rounded-lg text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none dynamic-expense-input" />
+                                </div>
+                            `;
+
+                            const input = row.querySelector('input');
+                            setupAmountField(input);
+                            input.addEventListener('input', (e) => {
+                                expenseAmounts[key] = e.target.value;
+                                updateModalSummary();
+                            });
+
+                            dynamicFieldsContainer.appendChild(row);
+                        });
+                    }
+
+                    updateModalSummary();
+                }
+
+                // Modal Real-Time Calculation
+                function updateModalSummary() {
+                    const inc = parseNum(incomeInput.value);
+                    let exp = 0;
+                    document.querySelectorAll('.dynamic-expense-input').forEach(field => {
+                        exp += parseNum(field.value);
+                    });
+                    const net = inc - exp;
+
+                    if (summaryIncome) summaryIncome.textContent = `₹${formatIN(inc)}`;
+                    if (summaryExpense) summaryExpense.textContent = `- ₹${formatIN(exp)}`;
+                    if (summaryNet) {
+                        summaryNet.textContent = `₹${formatIN(net)}`;
+                        summaryNet.className = net < 0 ? 'text-error font-bold' : 'text-primary font-bold';
+                    }
+                }
+
+                incomeInput.addEventListener('input', updateModalSummary);
+
+                async function loadTripsFromDB(search = '', startDate = '', endDate = '') {
+                    try {
+                        let url = '/api/trips?';
+                        if (search) url += `search=${encodeURIComponent(search)}&`;
+                        if (startDate && endDate) url += `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+
+                        const res = await fetch(url);
+                        const json = await res.json();
+                        if (json.success && Array.isArray(json.data)) {
+                            renderTripsList(json.data);
+                        }
+                    } catch (err) {
+                        console.warn('Could not load trips from DB:', err);
+                    }
+                }
+
+                function renderTripsList(trips) {
+                    if (!tripListContainer) return;
+                    tripListContainer.innerHTML = '';
+
+                    if (trips.length === 0) {
+                        tripListContainer.innerHTML = `
+                            <div class="text-center py-12 text-on-surface-variant text-sm font-medium">
+                                <span class="material-symbols-outlined text-4xl text-outline mb-2 block">route</span>
+                                No trips recorded in database
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    trips.forEach(t => {
+                        const d = new Date(t.trip_date);
+                        const formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                        const f = parseFloat(t.fuel || 0);
+                        const tol = parseFloat(t.tolls || 0);
+                        const al = parseFloat(t.allowance || 0);
+                        const oth = parseFloat(t.others || 0);
+                        const totalExp = f + tol + al + oth;
+                        const inc = parseFloat(t.income || 0);
+                        const net = parseFloat(t.net_profit || 0);
+
+                        let expenseChips = '';
+                        if (f > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Fuel: ₹${formatIN(f)}</span> `;
+                        if (tol > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Tolls: ₹${formatIN(tol)}</span> `;
+                        if (al > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Allowance: ₹${formatIN(al)}</span> `;
+                        if (oth > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Others: ₹${formatIN(oth)}</span> `;
+                        if (!expenseChips) expenseChips = `<span class="text-on-surface-variant text-[11px]">No Expenses recorded</span>`;
+
+                        const card = document.createElement('div');
+                        card.className = 'trip-card bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm hover:border-primary/50 transition-all flex flex-col gap-3';
+                        card.innerHTML = `
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <h4 class="font-bold text-sm text-on-surface">${t.driver_name}</h4>
+                                    <p class="text-[11px] text-on-surface-variant">Date: ${formattedDate} • <span class="font-medium text-primary">Type: ${t.trip_type}</span></p>
+                                </div>
+                                <p class="text-[11px] text-on-surface font-semibold flex items-center gap-1 mt-0.5"><span>${t.from_location}</span><span class="text-on-surface-variant text-[10px]">➔</span><span class="text-emerald-700">${t.to_location}</span></p>
+                            </div>
+
+                            <div class="flex flex-wrap gap-1.5 text-[11px]">
+                                ${expenseChips}
+                            </div>
+
+                            <div class="h-px w-full bg-outline-variant/30"></div>
+
+                            <div class="flex justify-between items-center text-xs">
+                                <div>
+                                    <span class="text-on-surface-variant block text-[11px]">Income / Expense</span>
+                                    <span class="font-semibold text-on-surface">₹${formatIN(inc)} <span class="text-error font-normal text-[11px]">(-₹${formatIN(totalExp)})</span></span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-on-surface-variant block text-[11px]">Net Profit</span>
+                                    <span class="font-bold ${net < 0 ? 'text-error' : 'text-primary'} text-sm">₹${formatIN(net)}</span>
+                                </div>
+                            </div>
+                        `;
+
+                        tripListContainer.appendChild(card);
+                    });
+                }
+
+                // Function to handle saving trip
+                async function handleSaveTrip(closeAfter) {
+                    const dateVal = document.getElementById('new-trip-date').value;
+                    const typeElem = document.getElementById('new-trip-type');
+                    const typeVal = typeElem ? typeElem.value : 'Out';
+                    const driverVal = document.getElementById('new-trip-driver').value;
+                    const fromLoc = document.getElementById('new-trip-from') ? document.getElementById('new-trip-from').value.trim() : '';
+                    const toLoc = document.getElementById('new-trip-to') ? document.getElementById('new-trip-to').value.trim() : '';
+                    const inc = parseNum(incomeInput.value);
+
+                    let f = 0, tol = 0, al = 0, oth = 0;
+                    selectedExpenses.forEach(key => {
+                        const field = dynamicFieldsContainer ? dynamicFieldsContainer.querySelector(`[data-expense-key="${key}"]`) : null;
+                        const amt = field ? parseNum(field.value) : 0;
+                        if (key === 'Fuel') f = amt;
+                        else if (key === 'Tolls') tol = amt;
+                        else if (key === 'Allowance') al = amt;
+                        else oth += amt;
+                    });
+
+                    try {
+                        const res = await fetch('/api/trips', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                driver_name: driverVal,
+                                trip_date: dateVal,
+                                trip_type: typeVal,
+                                from_location: fromLoc || 'Chennai',
+                                to_location: toLoc || 'Bangalore',
+                                income: inc,
+                                fuel: f,
+                                tolls: tol,
+                                allowance: al,
+                                others: oth,
+                                remarks: document.getElementById('new-trip-remarks') ? document.getElementById('new-trip-remarks').value : ''
+                            })
+                        });
+
+                        const json = await res.json();
+                        if (json.success) {
+                            loadTripsFromDB();
+
+                            if (closeAfter) {
+                                closeModal();
+                            } else {
+                                incomeInput.value = '';
+                                const fromInput = document.getElementById('new-trip-from');
+                                if (fromInput) fromInput.value = '';
+                                const toInput = document.getElementById('new-trip-to');
+                                if (toInput) toInput.value = '';
+                                const remarksInput = document.getElementById('new-trip-remarks');
+                                if (remarksInput) remarksInput.value = '';
+                                selectedExpenses.clear();
+                                for (let k in expenseAmounts) delete expenseAmounts[k];
+                                renderExpenseDropdownUI();
+
+                                const toast = document.getElementById('trip-saved-toast');
+                                if (toast) {
+                                    toast.classList.remove('hidden');
+                                    setTimeout(() => toast.classList.add('hidden'), 2500);
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error saving trip to DB:', err);
+                    }
+                }
+
+                // Submit Form - Save & Close
+                addTripForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    handleSaveTrip(true);
+                });
+
+                // Save & Next Button Handler
+                const saveNextBtn = document.getElementById('save-next-trip-btn');
+                if (saveNextBtn) {
+                    saveNextBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (addTripForm.checkValidity()) {
+                            handleSaveTrip(false);
+                        } else {
+                            addTripForm.reportValidity();
+                        }
+                    });
+                }
+            }
+
+            // Live Search Filter from Neon DB
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    loadTripsFromDB(e.target.value);
+                });
+            }
+
+            // Custom Calendar Date Range Picker Controls
+            const dateFilterModal = document.getElementById('date-filter-modal');
+            const openFilterBtns = [document.getElementById('header-date-filter-btn'), document.getElementById('toolbar-date-filter-btn')];
+            const closeFilterBtn = document.getElementById('close-date-filter-modal');
+            const applyFilterBtn = document.getElementById('apply-date-filter-btn');
+            const clearFilterBtn = document.getElementById('clear-date-filter-btn');
+
+            const prevMonthBtn = document.getElementById('prev-month-btn');
+            const nextMonthBtn = document.getElementById('next-month-btn');
+
+            let currentCalendarDate = new Date(2026, 9, 1); // Oct 2026
+            let rangeStart = null;
+            let rangeEnd = null;
+
+            function renderCalendar() {
+                const monthTitle = document.getElementById('calendar-month-title');
+                const daysGrid = document.getElementById('calendar-days-grid');
+                if (!daysGrid) return;
+
+                const year = currentCalendarDate.getFullYear();
+                const month = currentCalendarDate.getMonth();
+
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                if (monthTitle) monthTitle.textContent = `${monthNames[month]} ${year}`;
+
+                daysGrid.innerHTML = '';
+
+                const firstDay = new Date(year, month, 1).getDay();
+                const totalDays = new Date(year, month + 1, 0).getDate();
+
+                // Padding empty cells
+                for (let i = 0; i < firstDay; i++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'py-2';
+                    daysGrid.appendChild(emptyCell);
+                }
+
+                // Month days
+                for (let day = 1; day <= totalDays; day++) {
+                    const thisDate = new Date(year, month, day);
+                    const dayBtn = document.createElement('button');
+                    dayBtn.type = 'button';
+                    dayBtn.textContent = day;
+
+                    let classes = 'py-2 text-xs font-semibold transition-all relative select-none flex items-center justify-center h-9 w-full ';
+
+                    const isStart = rangeStart && thisDate.toDateString() === rangeStart.toDateString();
+                    const isEnd = rangeEnd && thisDate.toDateString() === rangeEnd.toDateString();
+                    const inRange = rangeStart && rangeEnd && thisDate > rangeStart && thisDate < rangeEnd;
+
+                    if (isStart && isEnd) {
+                        classes += 'bg-primary text-on-primary rounded-xl shadow-md font-bold z-10 scale-105';
+                    } else if (isStart) {
+                        classes += rangeEnd ? 'bg-primary text-on-primary rounded-l-xl font-bold shadow-md z-10' : 'bg-primary text-on-primary rounded-xl font-bold shadow-md z-10';
+                    } else if (isEnd) {
+                        classes += 'bg-primary text-on-primary rounded-r-xl font-bold shadow-md z-10';
+                    } else if (inRange) {
+                        classes += 'bg-primary/20 text-primary font-bold';
+                    } else {
+                        classes += 'text-on-surface hover:bg-surface-container rounded-lg';
+                    }
+
+                    dayBtn.className = classes;
+
+                    dayBtn.addEventListener('click', () => {
+                        if (!rangeStart || (rangeStart && rangeEnd)) {
+                            rangeStart = thisDate;
+                            rangeEnd = null;
+                        } else if (rangeStart && !rangeEnd) {
+                            if (thisDate < rangeStart) {
+                                rangeStart = thisDate;
+                            } else {
+                                rangeEnd = thisDate;
+                            }
+                        }
+                        updateRangeSummary();
+                        renderCalendar();
+                    });
+
+                    daysGrid.appendChild(dayBtn);
+                }
+            }
+
+            function updateRangeSummary() {
+                const rangeText = document.getElementById('selected-range-text');
+                const rangeCount = document.getElementById('range-days-count');
+                if (!rangeText) return;
+
+                if (rangeStart && rangeEnd) {
+                    const formatOpts = { month: 'short', day: 'numeric', year: 'numeric' };
+                    rangeText.textContent = `${rangeStart.toLocaleDateString('en-US', formatOpts)} - ${rangeEnd.toLocaleDateString('en-US', formatOpts)}`;
+                    const diffTime = Math.abs(rangeEnd - rangeStart);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    if (rangeCount) {
+                        rangeCount.textContent = `${diffDays} Days`;
+                        rangeCount.classList.remove('hidden');
+                    }
+                } else if (rangeStart) {
+                    const formatOpts = { month: 'short', day: 'numeric', year: 'numeric' };
+                    rangeText.textContent = `From: ${rangeStart.toLocaleDateString('en-US', formatOpts)} (Select End Date)`;
+                    if (rangeCount) rangeCount.classList.add('hidden');
+                } else {
+                    rangeText.textContent = 'No dates selected';
+                    if (rangeCount) rangeCount.classList.add('hidden');
+                }
+            }
+
+            if (prevMonthBtn) {
+                prevMonthBtn.addEventListener('click', () => {
+                    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+                    renderCalendar();
+                });
+            }
+
+            if (nextMonthBtn) {
+                nextMonthBtn.addEventListener('click', () => {
+                    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+                    renderCalendar();
+                });
+            }
+
+            openFilterBtns.forEach(btn => {
+                if (btn && dateFilterModal) {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dateFilterModal.classList.remove('hidden');
+                        renderCalendar();
+                    });
+                }
+            });
+
+            if (closeFilterBtn && dateFilterModal) {
+                closeFilterBtn.addEventListener('click', () => {
+                    dateFilterModal.classList.add('hidden');
+                });
+            }
+
+            if (dateFilterModal) {
+                dateFilterModal.addEventListener('click', (e) => {
+                    if (e.target === dateFilterModal) {
+                        dateFilterModal.classList.add('hidden');
+                    }
+                });
+            }
+
+            if (clearFilterBtn && tripListContainer) {
+                clearFilterBtn.addEventListener('click', () => {
+                    rangeStart = null;
+                    rangeEnd = null;
+                    updateRangeSummary();
+                    renderCalendar();
+                    const cards = tripListContainer.querySelectorAll('.trip-card');
+                    cards.forEach(c => c.style.display = 'flex');
+                    if (dateFilterModal) dateFilterModal.classList.add('hidden');
+                });
+            }
+
+            if (applyFilterBtn && tripListContainer) {
+                applyFilterBtn.addEventListener('click', () => {
+                    const cards = tripListContainer.querySelectorAll('.trip-card');
+                    if (rangeStart) {
+                        const fromTime = rangeStart.getTime();
+                        const toTime = rangeEnd ? rangeEnd.getTime() + 86400000 : fromTime + 86400000;
+
+                        cards.forEach(c => {
+                            const dateTextMatch = c.textContent.match(/Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/);
+                            if (dateTextMatch) {
+                                const cardDate = new Date(dateTextMatch[1]).getTime();
+                                if (cardDate >= fromTime && cardDate <= toTime) {
+                                    c.style.display = 'flex';
+                                } else {
+                                    c.style.display = 'none';
+                                }
+                            } else {
+                                c.style.display = 'flex';
+                            }
+                        });
+                    } else {
+                        cards.forEach(c => c.style.display = 'flex');
+                    }
+
+                    if (dateFilterModal) dateFilterModal.classList.add('hidden');
+                });
+            }
+
+            // Download Report XLSX Controls
+            const downloadBtns = [document.getElementById('header-download-btn'), document.getElementById('toolbar-download-btn')];
+            downloadBtns.forEach(btn => {
+                if (btn && tripListContainer) {
+                    btn.addEventListener('click', () => {
+                        const visibleCards = Array.from(tripListContainer.querySelectorAll('.trip-card')).filter(c => c.style.display !== 'none');
+                        const excelRows = [];
+
+                        visibleCards.forEach((card, idx) => {
+                            // 1. S.No
+                            const sNo = idx + 1;
+
+                            // 2. Driver Name
+                            const driverNameEl = card.querySelector('h4');
+                            const driverName = driverNameEl ? driverNameEl.textContent.trim() : 'N/A';
+
+                            // 3. Date & Type
+                            const pEl = card.querySelector('p');
+                            let dateStr = 'N/A';
+                            let typeStr = 'N/A';
+                            if (pEl) {
+                                const text = pEl.textContent;
+                                const dateMatch = text.match(/Date:\s*([A-Za-z0-9,\s]+?)(?:•|\$)/);
+                                if (dateMatch) dateStr = dateMatch[1].trim();
+                                const typeMatch = text.match(/Type:\s*([^\n\r•]+)/);
+                                if (typeMatch) typeStr = typeMatch[1].trim();
+                            }
+
+                            // 4. Expenses (Fuel, Tolls, Allowance, Others)
+                            let fuel = 0;
+                            let tolls = 0;
+                            let allowance = 0;
+                            let others = 0;
+
+                            const badges = card.querySelectorAll('.flex-wrap span');
+                            badges.forEach(b => {
+                                const bText = b.textContent;
+                                const amt = parseFloat(bText.replace(/[^0-9.]/g, '')) || 0;
+                                if (bText.includes('Fuel:')) fuel = amt;
+                                else if (bText.includes('Tolls:')) tolls = amt;
+                                else if (bText.includes('Allowance:') || bText.includes('Allowence:')) allowance = amt;
+                                else if (bText.includes('Others:')) others = amt;
+                            });
+
+                            // 5. Income & Net Profit
+                            let income = 0;
+                            let netProfit = 0;
+
+                            const bottomText = card.textContent;
+                            const incMatch = bottomText.match(/Income \/ Expense\s*₹([\d,]+)/i);
+                            if (incMatch) income = parseFloat(incMatch[1].replace(/,/g, '')) || 0;
+
+                            const netMatch = bottomText.match(/Net Profit\s*₹([\d,]+)/i);
+                            if (netMatch) netProfit = parseFloat(netMatch[1].replace(/,/g, '')) || 0;
+
+                            let fromLocStr = 'N/A';
+                            let toLocStr = 'N/A';
+                            const locMatch = card.textContent.match(/([A-Za-z\s]+)➔([A-Za-z\s]+)/);
+                            if (locMatch) {
+                                fromLocStr = locMatch[1].trim();
+                                toLocStr = locMatch[2].trim();
+                            }
+
+                            excelRows.push({
+                                "S.No": sNo,
+                                "Date": dateStr,
+                                "Driver Name": driverName,
+                                "From": fromLocStr,
+                                "To": toLocStr,
+                                "Type": typeStr,
+                                "Income": income,
+                                "Fuel": fuel,
+                                "Tolls": tolls,
+                                "Allowance": allowance,
+                                "Others": others,
+                                "Net Profit": netProfit
+                            });
+                        });
+
+                        if (typeof XLSX !== 'undefined') {
+                            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+
+                            // Format Column Widths for Excel view
+                            worksheet['!cols'] = [
+                                { wch: 8 },   // S.No
+                                { wch: 16 },  // Date
+                                { wch: 20 },  // Driver Name
+                                { wch: 15 },  // From
+                                { wch: 15 },  // To
+                                { wch: 10 },  // Type
+                                { wch: 12 },  // Income
+                                { wch: 10 },  // Fuel
+                                { wch: 10 },  // Tolls
+                                { wch: 12 },  // Allowance
+                                { wch: 10 },  // Others
+                                { wch: 14 }   // Net Profit
+                            ];
+
+                            const workbook = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(workbook, worksheet, "Saved Trips");
+                            XLSX.writeFile(workbook, "Go7_Saved_Trips_Report.xlsx");
+                        } else {
+                            let csv = "S.No,Date,Driver Name,Type,Income,Fuel,Tolls,Allowance,Others,Net Profit\n";
+                            excelRows.forEach(r => {
+                                csv += `${r["S.No"]},"${r.Date}","${r["Driver Name"]}","${r.Type}",${r.Income},${r.Fuel},${r.Tolls},${r.Allowance},${r.Others},${r["Net Profit"]}\n`;
+                            });
+                            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                            const link = document.createElement("a");
+                            link.href = URL.createObjectURL(blob);
+                            link.download = "Go7_Saved_Trips_Report.csv";
+                            link.click();
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

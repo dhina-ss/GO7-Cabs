@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GO7 Cabs</string>
+    <string name="title_activity_main">GO7 Cabs</string>
+    <string name="package_name">com.go7cabs.app</string>
+    <string name="custom_url_scheme">com.go7cabs.app</string>
+</resources>

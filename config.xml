@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.go7cabs.app" version="1.0.0" xmlns="http://www.cordova.io/ns/1.0">
+    <name>GO7 Cabs</name>
+    <description>GO7 Cabs Driver &amp; Trip Management Mobile Application</description>
+    <author email="support@go7cabs.com">GO7 Cabs Team</author>
+    <content src="home.html" />
+    <icon src="icon-512.png" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="Fullscreen" value="false" />
+    <preference name="BackgroundColor" value="0xfff7f9fb" />
+    <allow-navigation href="*" />
+    <access origin="*" />
+</widget>

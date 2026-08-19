@@ -1,0 +1,20 @@
+{
+  "appId": "com.go7cabs.app",
+  "appName": "GO7 Cabs",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "http://10.157.223.71:8080/home.html",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "cordova": {
+    "preferences": {
+      "Orientation": "portrait",
+      "Fullscreen": "false",
+      "BackgroundColor": "0xfff7f9fb"
+    }
+  }
+}
