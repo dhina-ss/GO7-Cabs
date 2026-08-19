@@ -289,6 +289,41 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal Card -->
+    <div id="delete-confirm-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="bg-surface-container-lowest w-full max-w-sm rounded-3xl border border-outline-variant/60 shadow-2xl p-6 relative flex flex-col items-center text-center space-y-4">
+            <!-- Icon Avatar -->
+            <div class="w-14 h-14 rounded-full bg-error/10 text-error flex items-center justify-center border border-error/20 shadow-sm">
+                <span class="material-symbols-outlined text-[28px]">delete_forever</span>
+            </div>
+
+            <!-- Content Text -->
+            <div class="space-y-1">
+                <h3 class="text-lg font-bold text-on-surface">Delete Driver?</h3>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                    Are you sure you want to delete <span id="delete-driver-target-name" class="font-bold text-on-surface"></span> (<span id="delete-driver-target-id" class="font-medium text-primary"></span>)?
+                </p>
+                <p class="text-[11px] text-error/90 bg-error/5 p-2 rounded-xl border border-error/10 mt-2 font-medium">
+                    ⚠️ Associated trips will also be removed.
+                </p>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="flex gap-3 w-full pt-2">
+                <button type="button" id="cancel-delete-btn"
+                    class="flex-1 py-2.5 rounded-xl border border-outline-variant/80 text-on-surface font-semibold text-xs hover:bg-surface-container transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="confirm-delete-btn"
+                    class="flex-1 py-2.5 rounded-xl bg-error text-white font-semibold text-xs hover:bg-error/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                    <span id="confirm-delete-text">Delete Driver</span>
+                    <span id="confirm-delete-spinner" class="hidden animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Add Driver Modal & Live Search Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -300,6 +335,13 @@
             const driverListContainer = document.getElementById('driver-list-container');
             const searchInput = document.getElementById('search-driver-input');
             const totalDriversCount = document.getElementById('total-drivers-count');
+
+            let pendingDeleteDriverId = null;
+            let pendingDeleteDriverName = '';
+
+            const deleteModal = document.getElementById('delete-confirm-modal');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 
             async function fetchTotalDriversCount() {
                 try {
@@ -381,23 +423,61 @@
                 });
             }
 
-            window.deleteDriver = async function(id, name) {
-                if (!confirm(`Are you sure you want to delete driver "${name}" (${id})? This will also remove associated trips.`)) {
-                    return;
-                }
-                try {
-                    const res = await fetch(`/api/drivers/${encodeURIComponent(id)}`, { method: 'DELETE' });
-                    const json = await res.json();
-                    if (json.success) {
-                        await loadDriversFromDB();
-                        await fetchTotalDriversCount();
-                    } else {
-                        alert(json.message || 'Could not delete driver');
-                    }
-                } catch (err) {
-                    console.error('Error deleting driver:', err);
-                }
+            // Custom Card Confirmation Delete Modal Logic
+            window.deleteDriver = function(id, name) {
+                pendingDeleteDriverId = id;
+                pendingDeleteDriverName = name;
+
+                const nameTarget = document.getElementById('delete-driver-target-name');
+                const idTarget = document.getElementById('delete-driver-target-id');
+                if (nameTarget) nameTarget.textContent = name;
+                if (idTarget) idTarget.textContent = id;
+
+                if (deleteModal) deleteModal.classList.remove('hidden');
             };
+
+            const closeDeleteModal = () => {
+                if (deleteModal) deleteModal.classList.add('hidden');
+                pendingDeleteDriverId = null;
+                pendingDeleteDriverName = '';
+            };
+
+            if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+            if (deleteModal) {
+                deleteModal.addEventListener('click', (e) => {
+                    if (e.target === deleteModal) closeDeleteModal();
+                });
+            }
+
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.addEventListener('click', async () => {
+                    if (!pendingDeleteDriverId) return;
+
+                    const btnText = document.getElementById('confirm-delete-text');
+                    const spinner = document.getElementById('confirm-delete-spinner');
+                    if (confirmDeleteBtn) confirmDeleteBtn.disabled = true;
+                    if (btnText) btnText.textContent = 'Deleting...';
+                    if (spinner) spinner.classList.remove('hidden');
+
+                    try {
+                        const res = await fetch(`/api/drivers/${encodeURIComponent(pendingDeleteDriverId)}`, { method: 'DELETE' });
+                        const json = await res.json();
+                        if (json.success) {
+                            closeDeleteModal();
+                            await loadDriversFromDB();
+                            await fetchTotalDriversCount();
+                        } else {
+                            alert(json.message || 'Could not delete driver');
+                        }
+                    } catch (err) {
+                        console.error('Error deleting driver:', err);
+                    } finally {
+                        if (confirmDeleteBtn) confirmDeleteBtn.disabled = false;
+                        if (btnText) btnText.textContent = 'Delete Driver';
+                        if (spinner) spinner.classList.add('hidden');
+                    }
+                });
+            }
 
             // Modal Handlers
             if (openAddBtn && addModal) {

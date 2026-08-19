@@ -1140,24 +1140,92 @@
                     });
                 }
 
-                window.deleteTrip = async function(id, driverName) {
-                    if (!confirm(`Are you sure you want to delete this trip record for "${driverName}"?`)) {
-                        return;
-                    }
+    <!-- Delete Trip Confirmation Modal Card -->
+    <div id="delete-trip-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="bg-surface-container-lowest w-full max-w-sm rounded-3xl border border-outline-variant/60 shadow-2xl p-6 relative flex flex-col items-center text-center space-y-4">
+            <div class="w-14 h-14 rounded-full bg-error/10 text-error flex items-center justify-center border border-error/20 shadow-sm">
+                <span class="material-symbols-outlined text-[28px]">delete_forever</span>
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-lg font-bold text-on-surface">Delete Trip?</h3>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                    Are you sure you want to delete the trip record for <span id="delete-trip-driver-name" class="font-bold text-on-surface"></span>?
+                </p>
+                <p class="text-[11px] text-error/90 bg-error/5 p-2 rounded-xl border border-error/10 mt-2 font-medium">
+                    ⚠️ Driver earnings & trip counts will be recalculated.
+                </p>
+            </div>
+
+            <div class="flex gap-3 w-full pt-2">
+                <button type="button" id="cancel-delete-trip-btn"
+                    class="flex-1 py-2.5 rounded-xl border border-outline-variant/80 text-on-surface font-semibold text-xs hover:bg-surface-container transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="confirm-delete-trip-btn"
+                    class="flex-1 py-2.5 rounded-xl bg-error text-white font-semibold text-xs hover:bg-error/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                    <span id="confirm-delete-trip-text">Delete Trip</span>
+                    <span id="confirm-delete-trip-spinner" class="hidden animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+            let pendingDeleteTripId = null;
+            const deleteTripModal = document.getElementById('delete-trip-modal');
+            const cancelDeleteTripBtn = document.getElementById('cancel-delete-trip-btn');
+            const confirmDeleteTripBtn = document.getElementById('confirm-delete-trip-btn');
+
+            window.deleteTrip = function(id, driverName) {
+                pendingDeleteTripId = id;
+                const targetEl = document.getElementById('delete-trip-driver-name');
+                if (targetEl) targetEl.textContent = driverName;
+                if (deleteTripModal) deleteTripModal.classList.remove('hidden');
+            };
+
+            const closeDeleteTripModal = () => {
+                if (deleteTripModal) deleteTripModal.classList.add('hidden');
+                pendingDeleteTripId = null;
+            };
+
+            if (cancelDeleteTripBtn) cancelDeleteTripBtn.addEventListener('click', closeDeleteTripModal);
+            if (deleteTripModal) {
+                deleteTripModal.addEventListener('click', (e) => {
+                    if (e.target === deleteTripModal) closeDeleteTripModal();
+                });
+            }
+
+            if (confirmDeleteTripBtn) {
+                confirmDeleteTripBtn.addEventListener('click', async () => {
+                    if (!pendingDeleteTripId) return;
+
+                    const btnText = document.getElementById('confirm-delete-trip-text');
+                    const spinner = document.getElementById('confirm-delete-trip-spinner');
+                    if (confirmDeleteTripBtn) confirmDeleteTripBtn.disabled = true;
+                    if (btnText) btnText.textContent = 'Deleting...';
+                    if (spinner) spinner.classList.remove('hidden');
+
                     try {
-                        const res = await fetch(`/api/trips/${id}`, { method: 'DELETE' });
+                        const res = await fetch(`/api/trips/${pendingDeleteTripId}`, { method: 'DELETE' });
                         const json = await res.json();
                         if (json.success) {
+                            closeDeleteTripModal();
                             loadTripsFromDB();
                         } else {
                             alert(json.message || 'Could not delete trip record');
                         }
                     } catch (err) {
                         console.error('Error deleting trip:', err);
+                    } finally {
+                        if (confirmDeleteTripBtn) confirmDeleteTripBtn.disabled = false;
+                        if (btnText) btnText.textContent = 'Delete Trip';
+                        if (spinner) spinner.classList.add('hidden');
                     }
-                };
+                });
+            }
 
-                window.openEditTripModal = function(tripId) {
+            window.openEditTripModal = function(tripId) {
                     const t = window.currentTripsData ? window.currentTripsData.find(x => x.id == tripId) : null;
                     if (!t) return;
 
