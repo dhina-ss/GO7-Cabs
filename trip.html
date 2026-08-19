@@ -648,7 +648,7 @@
                     }
                 });
 
-                // Currency Parser & Formatter (Minimum value = 0)
+                // Indian Currency Parser & Formatter (en-IN)
                 function parseNum(val) {
                     if (!val) return 0;
                     const clean = val.toString().replace(/[^0-9.]/g, '');
@@ -658,6 +658,25 @@
 
                 function formatIN(num) {
                     return Math.max(0, num).toLocaleString('en-IN');
+                }
+
+                function formatIndianCurrencyInput(input) {
+                    if (!input) return;
+                    const rawVal = input.value.replace(/[^0-9.]/g, '');
+                    if (!rawVal) {
+                        input.value = '';
+                        return;
+                    }
+                    const parts = rawVal.split('.');
+                    let intPart = parts[0];
+                    const decPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+
+                    if (intPart) {
+                        const num = parseInt(intPart, 10);
+                        if (!isNaN(num)) {
+                            input.value = num.toLocaleString('en-IN') + decPart;
+                        }
+                    }
                 }
 
                 function setupAmountField(input) {
@@ -671,11 +690,9 @@
                         }
                     });
 
-                    // Remove minus sign if pasted/typed & update summary
+                    // Live Indian currency formatting as user types
                     input.addEventListener('input', () => {
-                        if (input.value.includes('-')) {
-                            input.value = input.value.replace(/-/g, '');
-                        }
+                        formatIndianCurrencyInput(input);
                         updateModalSummary();
                     });
 
@@ -683,8 +700,8 @@
                     input.addEventListener('paste', (e) => {
                         e.preventDefault();
                         const text = (e.clipboardData || window.clipboardData).getData('text');
-                        const clean = text.replace(/[^0-9.]/g, '');
-                        input.value = clean ? parseNum(clean).toLocaleString('en-IN') : '';
+                        input.value = text;
+                        formatIndianCurrencyInput(input);
                         updateModalSummary();
                     });
                 }
@@ -1174,8 +1191,17 @@
                     }
 
                     trips.forEach(t => {
-                        const d = new Date(t.trip_date);
-                        const formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        let formattedDate = 'No date';
+                        if (t.trip_date) {
+                            const dtStr = String(t.trip_date).split('T')[0];
+                            const parts = dtStr.split('-');
+                            if (parts.length === 3) {
+                                formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                            } else {
+                                const d = new Date(t.trip_date);
+                                formattedDate = isNaN(d.getTime()) ? String(t.trip_date) : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                            }
+                        }
 
                         const f = parseFloat(t.fuel || 0);
                         const tol = parseFloat(t.tolls || 0);
@@ -1787,7 +1813,9 @@
                         }
                     });
                 }
-            });
+
+            // Initial load of trips from DB
+            loadTripsFromDB();
         });
     </script>
 </body>
