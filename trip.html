@@ -553,6 +553,87 @@
         </div>
     </div>
 
+    <!-- Trip Details Card Modal -->
+    <div id="trip-details-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="bg-surface-container-lowest w-full max-w-md rounded-3xl border border-outline-variant/60 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Header -->
+            <div class="px-5 py-4 border-b border-outline-variant/40 flex justify-between items-center bg-surface-bright shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[22px]">route</span>
+                    <div>
+                        <h3 class="text-base font-bold text-on-surface">Trip Details</h3>
+                        <span id="detail-trip-code" class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 font-mono">--</span>
+                    </div>
+                </div>
+                <button type="button" id="close-trip-details-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <!-- Body Content -->
+            <div class="p-5 space-y-4 overflow-y-auto hide-scrollbar text-xs">
+                <!-- Driver & Date Info Card -->
+                <div class="bg-surface-container-low border border-outline-variant/50 rounded-2xl p-4 space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[11px] text-on-surface-variant block font-medium">Driver Name(s)</span>
+                            <h4 id="detail-driver-name" class="text-sm font-bold text-on-surface">--</h4>
+                        </div>
+                        <span id="detail-trip-type" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">Type 1</span>
+                    </div>
+                    <div class="h-px w-full bg-outline-variant/30"></div>
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span class="text-on-surface-variant">Date: <strong id="detail-trip-date" class="text-on-surface font-semibold">--</strong></span>
+                        <span id="detail-route" class="font-bold text-emerald-700">--</span>
+                    </div>
+                </div>
+
+                <!-- Financial Summary Card -->
+                <div class="bg-surface-container-low border border-outline-variant/50 rounded-2xl p-4 space-y-3">
+                    <h5 class="font-bold text-xs text-on-surface flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-primary text-[18px]">payments</span> Financial Summary
+                    </h5>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="text-on-surface-variant">Gross Income</span>
+                            <span id="detail-income" class="font-bold text-on-surface">₹0</span>
+                        </div>
+                        
+                        <!-- Expense Items -->
+                        <div id="detail-expenses-container" class="space-y-1.5 pl-2.5 border-l-2 border-primary/20 text-[11px] text-on-surface-variant">
+                        </div>
+
+                        <div class="flex justify-between items-center pt-1.5 border-t border-outline-variant/40">
+                            <span class="text-on-surface-variant font-medium">Total Expenses</span>
+                            <span id="detail-total-expense" class="font-bold text-error">₹0</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t-2 border-outline-variant/60 text-sm">
+                            <span class="font-bold text-on-surface">Net Profit</span>
+                            <span id="detail-net-profit" class="font-extrabold text-primary">₹0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remarks Card (if any) -->
+                <div id="detail-remarks-wrapper" class="bg-surface-container-low border border-outline-variant/50 rounded-2xl p-3.5 space-y-1">
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Remarks / Notes</span>
+                    <p id="detail-remarks" class="text-xs text-on-surface leading-relaxed">--</p>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="p-4 border-t border-outline-variant/40 bg-surface-bright flex gap-3 shrink-0">
+                <button type="button" id="detail-edit-btn" class="flex-1 py-2.5 rounded-xl border border-primary/40 text-primary font-bold text-xs hover:bg-primary/10 transition-colors flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[18px]">edit</span> Edit Trip
+                </button>
+                <button type="button" id="detail-delete-btn" class="flex-1 py-2.5 rounded-xl bg-error/10 text-error border border-error/20 font-bold text-xs hover:bg-error/20 transition-colors flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[18px]">delete</span> Delete Trip
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Modal & Live Calculations -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -1232,7 +1313,12 @@
                         const tripCode = t.trip_code || ('GO7C26' + String(t.id).padStart(3, '0'));
 
                         const card = document.createElement('div');
-                        card.className = 'trip-card bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm hover:border-primary/50 transition-all flex flex-col gap-3';
+                        card.className = 'trip-card bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm hover:border-primary/50 transition-all flex flex-col gap-3 cursor-pointer active:scale-[0.99]';
+                        card.addEventListener('click', () => {
+                            if (typeof openTripDetailsModal === 'function') {
+                                openTripDetailsModal(t.id);
+                            }
+                        });
                         card.innerHTML = `
                             <div class="flex items-start justify-between gap-3">
                                 <div>
@@ -1274,6 +1360,110 @@
                         tripListContainer.appendChild(card);
                     });
                 }
+
+            // Trip Details Card Modal Controller
+            const detailsModal = document.getElementById('trip-details-modal');
+            const closeDetailsBtn = document.getElementById('close-trip-details-btn');
+            if (closeDetailsBtn && detailsModal) {
+                closeDetailsBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
+                detailsModal.addEventListener('click', (e) => {
+                    if (e.target === detailsModal) detailsModal.classList.add('hidden');
+                });
+            }
+
+            window.openTripDetailsModal = function(tripId) {
+                const t = window.currentTripsData ? window.currentTripsData.find(x => x.id == tripId) : null;
+                if (!t || !detailsModal) return;
+
+                const tripCode = t.trip_code || ('GO7C26' + String(t.id).padStart(3, '0'));
+                const codeEl = document.getElementById('detail-trip-code');
+                if (codeEl) codeEl.textContent = tripCode;
+
+                const driverEl = document.getElementById('detail-driver-name');
+                if (driverEl) driverEl.textContent = t.driver_name || '-';
+
+                const typeEl = document.getElementById('detail-trip-type');
+                if (typeEl) typeEl.textContent = `Type: ${t.trip_type || '1'}`;
+
+                let formattedDate = 'No date';
+                if (t.trip_date) {
+                    const dtStr = String(t.trip_date).split('T')[0];
+                    const parts = dtStr.split('-');
+                    if (parts.length === 3) formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    else formattedDate = String(t.trip_date);
+                }
+                const dateEl = document.getElementById('detail-trip-date');
+                if (dateEl) dateEl.textContent = formattedDate;
+
+                const routeEl = document.getElementById('detail-route');
+                if (routeEl) {
+                    if (t.from_location || t.to_location) {
+                        routeEl.innerHTML = `<span>${t.from_location || '-'}</span> ➔ <span>${t.to_location || '-'}</span>`;
+                        routeEl.classList.remove('hidden');
+                    } else {
+                        routeEl.innerHTML = '';
+                        routeEl.classList.add('hidden');
+                    }
+                }
+
+                const inc = parseFloat(t.income || 0);
+                const f = parseFloat(t.fuel || 0);
+                const tol = parseFloat(t.tolls || 0);
+                const al = parseFloat(t.allowance || 0);
+                const oth = parseFloat(t.others || 0);
+                const totalExp = f + tol + al + oth;
+                const net = parseFloat(t.net_profit || (inc - totalExp));
+
+                const incEl = document.getElementById('detail-income');
+                if (incEl) incEl.textContent = `₹${formatIN(inc)}`;
+
+                const expContainer = document.getElementById('detail-expenses-container');
+                if (expContainer) {
+                    expContainer.innerHTML = '';
+                    let hasExp = false;
+                    if (f > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Fuel</span><span class="font-semibold text-on-surface">₹${formatIN(f)}</span></div>`; hasExp = true; }
+                    if (tol > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Tolls</span><span class="font-semibold text-on-surface">₹${formatIN(tol)}</span></div>`; hasExp = true; }
+                    if (al > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Allowance</span><span class="font-semibold text-on-surface">₹${formatIN(al)}</span></div>`; hasExp = true; }
+                    if (oth > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Others</span><span class="font-semibold text-on-surface">₹${formatIN(oth)}</span></div>`; hasExp = true; }
+                    if (!hasExp) { expContainer.innerHTML = `<span class="text-on-surface-variant/70 italic text-[10px]">No expenses recorded</span>`; }
+                }
+
+                const expTotalEl = document.getElementById('detail-total-expense');
+                if (expTotalEl) expTotalEl.textContent = `₹${formatIN(totalExp)}`;
+
+                const netEl = document.getElementById('detail-net-profit');
+                if (netEl) {
+                    netEl.textContent = `₹${formatIN(net)}`;
+                    netEl.className = net < 0 ? 'font-extrabold text-error' : 'font-extrabold text-primary';
+                }
+
+                const remarksWrapper = document.getElementById('detail-remarks-wrapper');
+                const remarksEl = document.getElementById('detail-remarks');
+                if (t.remarks && t.remarks.trim()) {
+                    if (remarksEl) remarksEl.textContent = t.remarks;
+                    if (remarksWrapper) remarksWrapper.classList.remove('hidden');
+                } else {
+                    if (remarksWrapper) remarksWrapper.classList.add('hidden');
+                }
+
+                const editBtn = document.getElementById('detail-edit-btn');
+                if (editBtn) {
+                    editBtn.onclick = () => {
+                        detailsModal.classList.add('hidden');
+                        openEditTripModal(t.id);
+                    };
+                }
+
+                const deleteBtn = document.getElementById('detail-delete-btn');
+                if (deleteBtn) {
+                    deleteBtn.onclick = () => {
+                        detailsModal.classList.add('hidden');
+                        deleteTrip(t.id, t.driver_name);
+                    };
+                }
+
+                detailsModal.classList.remove('hidden');
+            };
 
             let pendingDeleteTripId = null;
             const deleteTripModal = document.getElementById('delete-trip-modal');
