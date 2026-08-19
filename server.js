@@ -36,6 +36,32 @@ function formatAmount(val) {
     return parseFloat(val || 0);
 }
 
+// Ensure soft delete and trip_code columns exist
+async function initDatabaseSchema() {
+    try {
+        await pool.query(`
+            ALTER TABLE drivers ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+            ALTER TABLE trips ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+            ALTER TABLE trips ADD COLUMN IF NOT EXISTS trip_code VARCHAR(50);
+        `);
+
+        // Backfill missing trip_code values if any exist
+        const unassignedTrips = await pool.query('SELECT id FROM trips WHERE trip_code IS NULL ORDER BY id ASC');
+        if (unassignedTrips.rows.length > 0) {
+            const curYr = new Date().getFullYear().toString().slice(-2);
+            for (let i = 0; i < unassignedTrips.rows.length; i++) {
+                const code = `GO7C${curYr}${String(i + 1).padStart(3, '0')}`;
+                await pool.query('UPDATE trips SET trip_code = $1 WHERE id = $2', [code, unassignedTrips.rows[i].id]);
+            }
+            console.log(`[OK] Backfilled ${unassignedTrips.rows.length} trips with GO7C{YY}{INCREMENT} trip_code`);
+        }
+        console.log('[OK] Database schema verified with trip_code & soft-delete support');
+    } catch (err) {
+        console.warn('DB schema init warning:', err.message);
+    }
+}
+initDatabaseSchema();
+
 // -------------------------------------------------------------
 // API Endpoints
 // -------------------------------------------------------------
@@ -50,6 +76,7 @@ app.get('/api/stats', async (req, res) => {
                 COALESCE(SUM(fuel + tolls + allowance + others), 0) as total_expense,
                 COALESCE(SUM(net_profit), 0) as net_profit
             FROM trips
+            WHERE COALESCE(is_deleted, false) = false
         `);
 
         const row = result.rows[0];
@@ -75,11 +102,11 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/drivers', async (req, res) => {
     try {
         const { search } = req.query;
-        let query = 'SELECT * FROM drivers';
+        let query = "SELECT * FROM drivers WHERE COALESCE(is_deleted, false) = false AND status != 'Deleted'";
         let params = [];
 
         if (search) {
-            query += ' WHERE LOWER(name) LIKE $1 OR LOWER(id) LIKE $1';
+            query += ' AND (LOWER(name) LIKE $1 OR LOWER(id) LIKE $1)';
             params.push(`%${search.toLowerCase()}%`);
         }
 
@@ -97,13 +124,13 @@ app.get('/api/drivers', async (req, res) => {
 app.get('/api/drivers/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const driverRes = await pool.query('SELECT * FROM drivers WHERE id = $1', [id]);
+        const driverRes = await pool.query('SELECT * FROM drivers WHERE id = $1 AND COALESCE(is_deleted, false) = false', [id]);
 
         if (driverRes.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Driver not found' });
         }
 
-        const tripsRes = await pool.query('SELECT * FROM trips WHERE driver_id = $1 ORDER BY trip_date DESC', [id]);
+        const tripsRes = await pool.query('SELECT * FROM trips WHERE driver_id = $1 AND COALESCE(is_deleted, false) = false ORDER BY trip_date DESC', [id]);
 
         res.json({
             success: true,
@@ -126,28 +153,20 @@ app.post('/api/drivers', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Driver name is required' });
         }
 
-        // Generate ID in format DR{YY}{INCREMENT} (e.g. DR26001)
+        // Generate ID in format DR{YY}{INCREMENT} (e.g. DR26001) - Never reuse deleted IDs
         const currentYear = new Date().getFullYear().toString().slice(-2); // "26"
         const prefix = `DR${currentYear}`;
 
-        const maxRes = await pool.query(
-            `SELECT id FROM drivers WHERE id LIKE $1 ORDER BY id DESC LIMIT 1`,
-            [`${prefix}%`]
-        );
+        const maxRes = await pool.query(`
+            SELECT COALESCE(MAX(
+                CAST(SUBSTRING(id FROM ${prefix.length + 1}) AS INTEGER)
+            ), 0) as max_seq 
+            FROM drivers 
+            WHERE id LIKE $1
+        `, [`${prefix}%`]);
 
-        let increment = 1;
-        if (maxRes.rows.length > 0) {
-            const lastId = maxRes.rows[0].id;
-            const numPart = parseInt(lastId.replace(prefix, ''), 10);
-            if (!isNaN(numPart)) {
-                increment = numPart + 1;
-            }
-        } else {
-            const countRes = await pool.query('SELECT COUNT(*) FROM drivers');
-            increment = parseInt(countRes.rows[0].count, 10) + 1;
-        }
-
-        const newId = `${prefix}${String(increment).padStart(3, '0')}`;
+        const nextSeq = parseInt(maxRes.rows[0].max_seq, 10) + 1;
+        const newId = `${prefix}${String(nextSeq).padStart(3, '0')}`;
 
         const insertRes = await pool.query(
             'INSERT INTO drivers (id, name, phone, status) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -187,12 +206,12 @@ app.put('/api/drivers/:id', async (req, res) => {
 app.get('/api/trips', async (req, res) => {
     try {
         const { search, startDate, endDate } = req.query;
-        let query = 'SELECT * FROM trips WHERE 1=1';
+        let query = 'SELECT * FROM trips WHERE COALESCE(is_deleted, false) = false';
         let params = [];
         let pCount = 1;
 
         if (search) {
-            query += ` AND (LOWER(driver_name) LIKE $${pCount} OR LOWER(from_location) LIKE $${pCount} OR LOWER(to_location) LIKE $${pCount} OR LOWER(trip_type) LIKE $${pCount})`;
+            query += ` AND (LOWER(driver_name) LIKE $${pCount} OR LOWER(from_location) LIKE $${pCount} OR LOWER(to_location) LIKE $${pCount} OR LOWER(trip_type) LIKE $${pCount} OR LOWER(trip_code) LIKE $${pCount})`;
             params.push(`%${search.toLowerCase()}%`);
             pCount++;
         }
@@ -242,16 +261,32 @@ app.post('/api/trips', async (req, res) => {
         const o = formatAmount(others);
         const net = inc - (f + t + a + o);
 
+        // Generate Trip ID in format GO7C{YY}{INCREMENT} (e.g. GO7C26001) - Never reuse deleted IDs
+        const currentYear = new Date().getFullYear().toString().slice(-2); // "26"
+        const prefix = `GO7C${currentYear}`;
+
+        const maxRes = await pool.query(`
+            SELECT COALESCE(MAX(
+                CAST(SUBSTRING(trip_code FROM ${prefix.length + 1}) AS INTEGER)
+            ), 0) as max_seq 
+            FROM trips 
+            WHERE trip_code LIKE $1
+        `, [`${prefix}%`]);
+
+        const nextSeq = parseInt(maxRes.rows[0].max_seq, 10) + 1;
+        const trip_code = `${prefix}${String(nextSeq).padStart(3, '0')}`;
+
         // Find driver_id for all drivers in driver_name (e.g. "Suresh Patel, Rahul Sharma")
         const driverNames = String(driver_name).split(',').map(s => s.trim()).filter(Boolean);
         const driverRes = await pool.query('SELECT id, name FROM drivers WHERE name = ANY($1)', [driverNames]);
 
         const insertRes = await pool.query(
             `INSERT INTO trips (
-                driver_id, driver_name, trip_date, trip_type, 
+                trip_code, driver_id, driver_name, trip_date, trip_type, 
                 from_location, to_location, income, fuel, tolls, allowance, others, net_profit, remarks
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
             [
+                trip_code,
                 driverRes.rows.length > 0 ? driverRes.rows[0].id : null,
                 driver_name,
                 trip_date,
@@ -296,6 +331,7 @@ app.get('/api/charts', async (req, res) => {
                 COALESCE(SUM(allowance), 0) as allowance,
                 COALESCE(SUM(others), 0) as others
             FROM trips
+            WHERE COALESCE(is_deleted, false) = false
         `);
 
         const trendRes = await pool.query(`
@@ -305,6 +341,7 @@ app.get('/api/charts', async (req, res) => {
                 COALESCE(SUM(income), 0) as earnings,
                 COALESCE(SUM(fuel + tolls + allowance + others), 0) as expenses
             FROM trips
+            WHERE COALESCE(is_deleted, false) = false
             GROUP BY trip_date
             ORDER BY trip_date ASC
             LIMIT 7
@@ -326,7 +363,7 @@ app.get('/api/charts', async (req, res) => {
                 DATE_TRUNC('month', CURRENT_DATE),
                 INTERVAL '1 month'
             ) as month_series
-            LEFT JOIN trips t ON DATE_TRUNC('month', t.trip_date) = month_series
+            LEFT JOIN trips t ON DATE_TRUNC('month', t.trip_date) = month_series AND COALESCE(t.is_deleted, false) = false
             GROUP BY month_series
             ORDER BY month_series ASC
         `);
@@ -359,29 +396,29 @@ app.get('/api/charts', async (req, res) => {
     }
 });
 
-// 9. Delete Driver
+// 9. Soft Delete Driver
 app.delete('/api/drivers/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        await pool.query('DELETE FROM trips WHERE driver_id = $1', [id]);
-        const delRes = await pool.query('DELETE FROM drivers WHERE id = $1 RETURNING *', [id]);
+        await pool.query('UPDATE trips SET is_deleted = true WHERE driver_id = $1', [id]);
+        const delRes = await pool.query("UPDATE drivers SET is_deleted = true, status = 'Deleted' WHERE id = $1 RETURNING *", [id]);
 
         if (delRes.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Driver not found' });
         }
 
-        res.json({ success: true, message: 'Driver deleted successfully' });
+        res.json({ success: true, message: 'Driver soft-deleted successfully' });
     } catch (err) {
         console.error('API DELETE /api/drivers/:id Error:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// 10. Delete Trip
+// 10. Soft Delete Trip
 app.delete('/api/trips/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const tripRes = await pool.query('DELETE FROM trips WHERE id = $1 RETURNING *', [id]);
+        const tripRes = await pool.query('UPDATE trips SET is_deleted = true WHERE id = $1 RETURNING *', [id]);
 
         if (tripRes.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Trip record not found' });
@@ -399,7 +436,7 @@ app.delete('/api/trips/:id', async (req, res) => {
             );
         }
 
-        res.json({ success: true, message: 'Trip deleted successfully' });
+        res.json({ success: true, message: 'Trip soft-deleted successfully' });
     } catch (err) {
         console.error('API DELETE /api/trips/:id Error:', err.message);
         res.status(500).json({ success: false, error: err.message });

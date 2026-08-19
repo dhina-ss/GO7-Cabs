@@ -1099,12 +1099,17 @@
                             routeHTML = `<p class="text-[11px] text-on-surface font-semibold flex items-center gap-1 mt-0.5"><span>${t.from_location || '-'}</span><span class="text-on-surface-variant text-[10px]">➔</span><span class="text-emerald-700">${t.to_location || '-'}</span></p>`;
                         }
 
+                        const tripCode = t.trip_code || ('GO7C26' + String(t.id).padStart(3, '0'));
+
                         const card = document.createElement('div');
                         card.className = 'trip-card bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm hover:border-primary/50 transition-all flex flex-col gap-3';
                         card.innerHTML = `
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <h4 class="font-bold text-sm text-on-surface">${t.driver_name}</h4>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-bold text-sm text-on-surface">${t.driver_name}</h4>
+                                        <span class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 font-mono">${tripCode}</span>
+                                    </div>
                                     <p class="text-[11px] text-on-surface-variant">Date: ${formattedDate} • <span class="font-medium text-primary">Type: ${t.trip_type}</span></p>
                                 </div>
                                 <div class="flex items-center gap-1.5">
