@@ -218,6 +218,7 @@ app.post('/api/trips', async (req, res) => {
     try {
         const {
             driver_name,
+            driver_amounts,
             trip_date,
             trip_type,
             from_location,
@@ -230,8 +231,8 @@ app.post('/api/trips', async (req, res) => {
             remarks
         } = req.body;
 
-        if (!driver_name || !trip_date || !from_location || !to_location) {
-            return res.status(400).json({ success: false, message: 'Required fields missing' });
+        if (!driver_name || !trip_date) {
+            return res.status(400).json({ success: false, message: 'Driver name and trip date are required' });
         }
 
         const inc = formatAmount(income);
@@ -241,9 +242,9 @@ app.post('/api/trips', async (req, res) => {
         const o = formatAmount(others);
         const net = inc - (f + t + a + o);
 
-        // Find driver_id by driver_name if possible
-        const driverRes = await pool.query('SELECT id FROM drivers WHERE name = $1 LIMIT 1', [driver_name]);
-        const driverId = driverRes.rows.length > 0 ? driverRes.rows[0].id : null;
+        // Find driver_id for all drivers in driver_name (e.g. "Suresh Patel, Rahul Sharma")
+        const driverNames = String(driver_name).split(',').map(s => s.trim()).filter(Boolean);
+        const driverRes = await pool.query('SELECT id, name FROM drivers WHERE name = ANY($1)', [driverNames]);
 
         const insertRes = await pool.query(
             `INSERT INTO trips (
@@ -251,20 +252,31 @@ app.post('/api/trips', async (req, res) => {
                 from_location, to_location, income, fuel, tolls, allowance, others, net_profit, remarks
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
             [
-                driverId, driver_name, trip_date, trip_type || '1',
-                from_location, to_location, inc, f, t, a, o, net, remarks || ''
+                driverRes.rows.length > 0 ? driverRes.rows[0].id : null,
+                driver_name,
+                trip_date,
+                trip_type || '1',
+                from_location || '',
+                to_location || '',
+                inc, f, t, a, o, net, remarks || ''
             ]
         );
 
-        // Update driver stats if driver exists
-        if (driverId) {
-            await pool.query(
-                `UPDATE drivers SET 
-                    trips_count = trips_count + 1, 
-                    total_earnings = total_earnings + $1 
-                WHERE id = $2`,
-                [inc, driverId]
-            );
+        // Update driver stats for all selected drivers (using individual assigned driver_amounts if provided)
+        if (driverRes.rows.length > 0) {
+            for (const dRow of driverRes.rows) {
+                const specificAmt = (driver_amounts && driver_amounts[dRow.name] !== undefined)
+                    ? formatAmount(driver_amounts[dRow.name])
+                    : (inc / (driverRes.rows.length || 1));
+
+                await pool.query(
+                    `UPDATE drivers SET 
+                        trips_count = trips_count + 1, 
+                        total_earnings = total_earnings + $1 
+                    WHERE id = $2`,
+                    [specificAmt, dRow.id]
+                );
+            }
         }
 
         res.status(201).json({ success: true, data: insertRes.rows[0] });
@@ -390,6 +402,103 @@ app.delete('/api/trips/:id', async (req, res) => {
         res.json({ success: true, message: 'Trip deleted successfully' });
     } catch (err) {
         console.error('API DELETE /api/trips/:id Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 11. Edit / Update Trip
+app.put('/api/trips/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            driver_name,
+            driver_amounts,
+            trip_date,
+            trip_type,
+            from_location,
+            to_location,
+            income,
+            fuel,
+            tolls,
+            allowance,
+            others,
+            remarks
+        } = req.body;
+
+        const oldTripRes = await pool.query('SELECT * FROM trips WHERE id = $1', [id]);
+        if (oldTripRes.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Trip not found' });
+        }
+        const oldTrip = oldTripRes.rows[0];
+
+        if (oldTrip.driver_id) {
+            const oldInc = parseFloat(oldTrip.income || 0);
+            await pool.query(
+                `UPDATE drivers SET 
+                    trips_count = GREATEST(0, trips_count - 1), 
+                    total_earnings = GREATEST(0, total_earnings - $1) 
+                WHERE id = $2`,
+                [oldInc, oldTrip.driver_id]
+            );
+        }
+
+        const inc = formatAmount(income);
+        const f = formatAmount(fuel);
+        const t = formatAmount(tolls);
+        const a = formatAmount(allowance);
+        const o = formatAmount(others);
+        const net = inc - (f + t + a + o);
+
+        const driverNames = String(driver_name).split(',').map(s => s.trim()).filter(Boolean);
+        const driverRes = await pool.query('SELECT id, name FROM drivers WHERE name = ANY($1)', [driverNames]);
+
+        const updateRes = await pool.query(
+            `UPDATE trips SET 
+                driver_id = $1, 
+                driver_name = $2, 
+                trip_date = $3, 
+                trip_type = $4, 
+                from_location = $5, 
+                to_location = $6, 
+                income = $7, 
+                fuel = $8, 
+                tolls = $9, 
+                allowance = $10, 
+                others = $11, 
+                net_profit = $12, 
+                remarks = $13 
+            WHERE id = $14 RETURNING *`,
+            [
+                driverRes.rows.length > 0 ? driverRes.rows[0].id : null,
+                driver_name,
+                trip_date,
+                trip_type || '1',
+                from_location || '',
+                to_location || '',
+                inc, f, t, a, o, net, remarks || '',
+                id
+            ]
+        );
+
+        if (driverRes.rows.length > 0) {
+            for (const dRow of driverRes.rows) {
+                const specificAmt = (driver_amounts && driver_amounts[dRow.name] !== undefined)
+                    ? formatAmount(driver_amounts[dRow.name])
+                    : (inc / (driverRes.rows.length || 1));
+
+                await pool.query(
+                    `UPDATE drivers SET 
+                        trips_count = trips_count + 1, 
+                        total_earnings = total_earnings + $1 
+                    WHERE id = $2`,
+                    [specificAmt, dRow.id]
+                );
+            }
+        }
+
+        res.json({ success: true, data: updateRes.rows[0] });
+    } catch (err) {
+        console.error('API PUT /api/trips/:id Error:', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
