@@ -9,13 +9,14 @@
     <meta name="theme-color" content="#004ac6">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" href="go7-logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
         rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -1845,10 +1846,14 @@
                 }
             }
 
-            // Live Search Filter from Neon DB
+            // Live Search Filter from Neon DB (Debounced for instant responsiveness & reduced server load)
             if (searchInput) {
+                let searchDebounce = null;
                 searchInput.addEventListener('input', (e) => {
-                    loadTripsFromDB(e.target.value);
+                    clearTimeout(searchDebounce);
+                    searchDebounce = setTimeout(() => {
+                        loadTripsFromDB(e.target.value);
+                    }, 250);
                 });
             }
 
@@ -2116,8 +2121,20 @@
                             });
                         });
 
-                        if (typeof XLSX !== 'undefined') {
-                            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+                        async function getXLSX() {
+                            if (typeof window.XLSX !== 'undefined') return window.XLSX;
+                            return new Promise((resolve) => {
+                                const s = document.createElement('script');
+                                s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+                                s.onload = () => resolve(window.XLSX);
+                                s.onerror = () => resolve(null);
+                                document.head.appendChild(s);
+                            });
+                        }
+
+                        const XLSXLib = await getXLSX();
+                        if (XLSXLib) {
+                            const worksheet = XLSXLib.utils.json_to_sheet(excelRows);
 
                             // Format Column Widths for Excel view
                             worksheet['!cols'] = [
@@ -2135,9 +2152,9 @@
                                 { wch: 14 }   // Net Profit
                             ];
 
-                            const workbook = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(workbook, worksheet, "Saved Trips");
-                            XLSX.writeFile(workbook, "Go7_Saved_Trips_Report.xlsx");
+                            const workbook = XLSXLib.utils.book_new();
+                            XLSXLib.utils.book_append_sheet(workbook, worksheet, "Saved Trips");
+                            XLSXLib.writeFile(workbook, "Go7_Saved_Trips_Report.xlsx");
                         } else {
                             let csv = "S.No,Date,Driver Name,Type,Income,Fuel,Tolls,Allowance,Others,Net Profit\n";
                             excelRows.forEach(r => {
