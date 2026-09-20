@@ -144,7 +144,33 @@
     </header>
     <!-- Main Content Canvas -->
     <main class="pt-20 px-4 space-y-stack-lg max-w-md mx-auto pb-6">
-        <!-- Bento Analysis Summary Cards (Moved from trip.html) -->
+        <!-- Modern Premium Month Filter Section -->
+        <section class="space-y-2">
+            <div class="flex items-center gap-2">
+                <!-- Main Month Picker Trigger Card -->
+                <button id="month-picker-trigger" type="button"
+                    class="flex-1 flex items-center justify-between gap-3 bg-surface-container-lowest hover:bg-surface-container-low border border-outline-variant/60 hover:border-primary/50 rounded-2xl px-3.5 py-2.5 shadow-sm transition-all active:scale-[0.99] group cursor-pointer">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-primary-container text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-primary/25">
+                            <span class="material-symbols-outlined text-[14px]">calendar_month</span>
+                        </div>
+                        <div class="text-left min-w-0">
+                            <span id="active-month-display" class="text-sm font-extrabold text-on-surface truncate block mt-0.5">Sep - 2026</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center text-on-surface-variant group-hover:text-primary transition-colors pr-1">
+                        <span class="material-symbols-outlined text-[20px] transition-transform group-hover:translate-y-0.5">expand_more</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Scrollable Quick-Chips Row -->
+            <div id="quick-month-chips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+                <!-- Dynamically injected chips -->
+            </div>
+        </section>
+
+        <!-- Bento Analysis Summary Cards -->
         <section class="grid grid-cols-2 gap-3">
             <div
                 class="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
@@ -187,21 +213,30 @@
         <div class="space-y-6">
             <!-- Monthly Trip Count (Last 6 Months) -->
             <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-4 shadow-sm">
-                <h3 class="text-label-md font-label-md text-on-surface mb-4">Monthly Trip Count (Last 6 Months)</h3>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-label-md font-label-md text-on-surface">Monthly Trip Count</h3>
+                    <span class="text-[11px] text-on-surface-variant font-medium">Click bar to select</span>
+                </div>
                 <div class="h-48 w-full relative">
                     <canvas id="monthlyBarChart"></canvas>
                 </div>
             </div>
             <!-- Line Chart: Earnings vs Expenses -->
             <div class="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant/30 shadow-sm">
-                <h3 class="text-label-md font-label-md text-on-surface mb-4">Earnings vs Expenses</h3>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-label-md font-label-md text-on-surface">Earnings vs Expenses</h3>
+                    <span id="trend-month-indicator" class="text-[11px] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-md"></span>
+                </div>
                 <div class="h-48 w-full relative">
                     <canvas id="lineChart"></canvas>
                 </div>
             </div>
             <!-- Donut Chart: Expense Breakdown -->
             <div class="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant/30 shadow-sm">
-                <h3 class="text-label-md font-label-md text-on-surface mb-4">Expense Breakdown</h3>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-label-md font-label-md text-on-surface">Expense Breakdown</h3>
+                    <span id="donut-month-indicator" class="text-[11px] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-md"></span>
+                </div>
                 <div class="h-48 w-full relative flex justify-center">
                     <canvas id="donutChart"></canvas>
                 </div>
@@ -227,13 +262,268 @@
             <span class="material-symbols-outlined">person_pin</span>
             <span class="text-[10px]">Driver</span>
         </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+            href="settings.html">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="text-[10px]">Settings</span>
+        </a>
     </nav>
+    <!-- Modern Month Picker Sheet Modal -->
+    <div id="month-picker-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm hidden transition-opacity">
+        <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-t-3xl sm:rounded-3xl w-full max-w-sm shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-2 border-b border-outline-variant/30">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                    </div>
+                    <h3 class="text-sm font-bold text-on-surface">Filter By Month</h3>
+                </div>
+                <button type="button" id="close-month-modal-btn" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            <!-- All Months Option -->
+            <button type="button" id="modal-all-months-btn"
+                class="w-full flex items-center justify-between p-3 rounded-2xl border border-outline-variant/60 hover:border-primary/50 transition-all text-left font-semibold text-xs cursor-pointer group bg-surface-container-low">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-[18px]">all_inclusive</span>
+                    </div>
+                    <div>
+                        <p class="font-bold text-xs text-on-surface">All Months</p>
+                        <p class="text-[10px] text-on-surface-variant font-normal">View lifetime aggregate metrics</p>
+                    </div>
+                </div>
+                <span id="all-months-check" class="material-symbols-outlined text-primary text-[20px] hidden">check_circle</span>
+            </button>
+
+            <!-- Year Selector in Modal -->
+            <div class="flex items-center justify-between bg-surface-container-low p-1.5 rounded-2xl">
+                <button type="button" id="modal-prev-year-btn" class="w-8 h-8 flex items-center justify-center rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface transition-all active:scale-95 shadow-xs cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                </button>
+                <span id="modal-year-display" class="font-extrabold text-xs text-on-surface tracking-wide">2026</span>
+                <button type="button" id="modal-next-year-btn" class="w-8 h-8 flex items-center justify-center rounded-xl bg-surface-container-lowest hover:bg-surface-container text-on-surface transition-all active:scale-95 shadow-xs cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                </button>
+            </div>
+
+            <!-- 12-Month Grid (Jan - Dec) -->
+            <div id="modal-months-grid" class="grid grid-cols-3 gap-2">
+                <!-- Dynamically populated month cards -->
+            </div>
+        </div>
+    </div>
+
     <script>
         let barChartInstance = null;
         let lineChartInstance = null;
         let donutChartInstance = null;
 
-        function initCharts(trendData, expenseData, monthlyTrend) {
+        function getCurrentYearMonth() {
+            const now = new Date();
+            const yr = now.getFullYear();
+            const mo = String(now.getMonth() + 1).padStart(2, '0');
+            return `${yr}-${mo}`;
+        }
+
+        // Default to current month
+        let selectedMonth = getCurrentYearMonth();
+        let modalYear = parseInt(selectedMonth.split('-')[0], 10) || new Date().getFullYear();
+        let availableMonthsCache = [];
+
+        const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        // Format as 'Jan - 2026'
+        function formatMonthDisplayName(ym) {
+            if (!ym || ym === 'all') return 'All Months';
+            const parts = ym.split('-');
+            if (parts.length !== 2) return ym;
+            const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+            if (isNaN(d.getTime())) return ym;
+            const shortMonth = d.toLocaleDateString('en-US', { month: 'short' });
+            const fullYear = d.getFullYear();
+            return `${shortMonth} - ${fullYear}`;
+        }
+
+        function getAdjacentMonth(ym, offset) {
+            if (!ym || ym === 'all') ym = getCurrentYearMonth();
+            const [yStr, mStr] = ym.split('-');
+            const d = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1 + offset, 1);
+            const yr = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            return `${yr}-${mo}`;
+        }
+
+        // Render Quick Chips & Active Month Display
+        function updateMonthUI(monthKey) {
+            const activeDisplay = document.getElementById('active-month-display');
+            const trendBadge = document.getElementById('trend-month-indicator');
+            const donutBadge = document.getElementById('donut-month-indicator');
+
+            const formattedPeriod = formatMonthDisplayName(monthKey);
+            if (activeDisplay) activeDisplay.textContent = formattedPeriod;
+            if (trendBadge) trendBadge.textContent = formattedPeriod;
+            if (donutBadge) donutBadge.textContent = formattedPeriod;
+
+            renderQuickChips(monthKey);
+            renderModalGrid();
+        }
+
+        function renderQuickChips(monthKey) {
+            const container = document.getElementById('quick-month-chips');
+            if (!container) return;
+
+            const chipKeys = [];
+            chipKeys.push('all');
+
+            const currentYM = getCurrentYearMonth();
+            const seen = new Set(['all']);
+
+            availableMonthsCache.forEach(m => {
+                if (!seen.has(m.key)) {
+                    chipKeys.push(m.key);
+                    seen.add(m.key);
+                }
+            });
+
+            if (!seen.has(currentYM)) {
+                chipKeys.splice(1, 0, currentYM);
+                seen.add(currentYM);
+            }
+
+            if (monthKey && !seen.has(monthKey)) {
+                chipKeys.splice(1, 0, monthKey);
+                seen.add(monthKey);
+            }
+
+            container.innerHTML = '';
+            chipKeys.forEach(k => {
+                const isSelected = (k === monthKey);
+                const chipBtn = document.createElement('button');
+                chipBtn.type = 'button';
+                chipBtn.className = isSelected
+                    ? 'px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-primary to-primary-container text-white shadow-sm shadow-primary/30 border border-primary transition-all active:scale-95 flex-shrink-0 cursor-pointer flex items-center gap-1.5'
+                    : 'px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-container-lowest text-on-surface-variant hover:text-on-surface border border-outline-variant/60 hover:border-primary/40 hover:bg-surface-container transition-all active:scale-95 flex-shrink-0 cursor-pointer flex items-center gap-1.5';
+
+                chipBtn.innerHTML = `
+                    ${isSelected ? '<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>' : ''}
+                    <span>${formatMonthDisplayName(k)}</span>
+                `;
+                chipBtn.addEventListener('click', () => {
+                    if (k !== selectedMonth) selectMonth(k);
+                });
+                container.appendChild(chipBtn);
+            });
+        }
+
+        // Render Month Grid inside the Modal
+        function renderModalGrid() {
+            const grid = document.getElementById('modal-months-grid');
+            const yearDisplay = document.getElementById('modal-year-display');
+            const allMonthsCheck = document.getElementById('all-months-check');
+            const allMonthsBtn = document.getElementById('modal-all-months-btn');
+            if (!grid) return;
+
+            if (yearDisplay) yearDisplay.textContent = modalYear;
+
+            if (selectedMonth === 'all') {
+                allMonthsCheck?.classList.remove('hidden');
+                allMonthsBtn?.classList.add('border-primary', 'bg-primary/5', 'ring-1', 'ring-primary/30');
+            } else {
+                allMonthsCheck?.classList.add('hidden');
+                allMonthsBtn?.classList.remove('border-primary', 'bg-primary/5', 'ring-1', 'ring-primary/30');
+            }
+
+            grid.innerHTML = '';
+            MONTH_NAMES.forEach((mName, idx) => {
+                const monthNumStr = String(idx + 1).padStart(2, '0');
+                const key = `${modalYear}-${monthNumStr}`;
+                const isSelected = (key === selectedMonth);
+                const hasData = availableMonthsCache.some(m => m.key === key);
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = isSelected
+                    ? 'py-2.5 px-2 rounded-2xl bg-gradient-to-tr from-primary to-primary-container text-white font-extrabold text-xs shadow-sm shadow-primary/30 border border-primary transition-all active:scale-95 cursor-pointer relative flex flex-col items-center justify-center gap-0.5'
+                    : 'py-2.5 px-2 rounded-2xl bg-surface-container-low hover:bg-surface-container text-on-surface hover:text-primary font-bold text-xs border border-outline-variant/40 hover:border-primary/40 transition-all active:scale-95 cursor-pointer relative flex flex-col items-center justify-center gap-0.5';
+
+                btn.innerHTML = `
+                    <span>${mName}</span>
+                    <span class="text-[9px] ${isSelected ? 'text-white/80' : 'text-on-surface-variant/70'} font-normal">${modalYear}</span>
+                    ${hasData && !isSelected ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-600 absolute top-1.5 right-1.5" title="Has recorded trips"></span>' : ''}
+                `;
+
+                btn.addEventListener('click', () => {
+                    closeMonthModal();
+                    selectMonth(key);
+                });
+                grid.appendChild(btn);
+            });
+        }
+
+        function selectMonth(newMonth) {
+            selectedMonth = newMonth;
+            if (newMonth && newMonth !== 'all') {
+                modalYear = parseInt(newMonth.split('-')[0], 10) || modalYear;
+            }
+            updateMonthUI(selectedMonth);
+            fetchLiveStats(selectedMonth);
+        }
+
+        // Modal Controls
+        const monthModal = document.getElementById('month-picker-modal');
+        const openModalBtn = document.getElementById('month-picker-trigger');
+        const closeModalBtn = document.getElementById('close-month-modal-btn');
+        const allMonthsBtn = document.getElementById('modal-all-months-btn');
+
+        function openMonthModal() {
+            if (selectedMonth && selectedMonth !== 'all') {
+                modalYear = parseInt(selectedMonth.split('-')[0], 10) || new Date().getFullYear();
+            }
+            renderModalGrid();
+            monthModal?.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeMonthModal() {
+            monthModal?.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        openModalBtn?.addEventListener('click', openMonthModal);
+        closeModalBtn?.addEventListener('click', closeMonthModal);
+        monthModal?.addEventListener('click', (e) => {
+            if (e.target === monthModal) closeMonthModal();
+        });
+
+        allMonthsBtn?.addEventListener('click', () => {
+            closeMonthModal();
+            selectMonth('all');
+        });
+
+        document.getElementById('modal-prev-year-btn')?.addEventListener('click', () => {
+            modalYear--;
+            renderModalGrid();
+        });
+
+        document.getElementById('modal-next-year-btn')?.addEventListener('click', () => {
+            modalYear++;
+            renderModalGrid();
+        });
+
+        // Previous / Next Buttons in Main View
+        document.getElementById('prev-month-btn')?.addEventListener('click', () => {
+            selectMonth(getAdjacentMonth(selectedMonth, -1));
+        });
+
+        document.getElementById('next-month-btn')?.addEventListener('click', () => {
+            selectMonth(getAdjacentMonth(selectedMonth, 1));
+        });
+
+        function initCharts(trendData, expenseData, monthlyTrend, currentMonthKey, categoryLabels = {}, categoryBreakdown = []) {
             const barCanvas = document.getElementById('monthlyBarChart');
             const lineCanvas = document.getElementById('lineChart');
             const donutCanvas = document.getElementById('donutChart');
@@ -250,6 +540,11 @@
             const monthCounts = monthlyTrend && monthlyTrend.length > 0 
                 ? monthlyTrend.map(m => m.count) 
                 : [0, 0, 0, 0, 0, 0];
+            const monthKeys = monthlyTrend && monthlyTrend.length > 0
+                ? monthlyTrend.map(m => m.monthKey)
+                : [];
+
+            const barColors = monthKeys.map(k => (k === currentMonthKey ? '#004ac6' : '#b4c5ff'));
 
             if (barChartInstance) barChartInstance.destroy();
             barChartInstance = new Chart(barCtx, {
@@ -259,7 +554,7 @@
                     datasets: [{
                         label: 'Trips',
                         data: monthCounts,
-                        backgroundColor: '#004ac6',
+                        backgroundColor: barColors,
                         borderRadius: 6,
                         barThickness: 22
                     }]
@@ -268,6 +563,15 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
+                    onClick: (e, activeElements) => {
+                        if (activeElements && activeElements.length > 0) {
+                            const idx = activeElements[0].index;
+                            const clickedKey = monthKeys[idx];
+                            if (clickedKey && clickedKey !== selectedMonth) {
+                                selectMonth(clickedKey);
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -279,10 +583,10 @@
                 }
             });
 
-            // 2. Line Chart (Earnings vs Expenses)
-            const labels = trendData && trendData.length > 0 ? trendData.map(t => t.day) : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            const earnings = trendData && trendData.length > 0 ? trendData.map(t => t.earnings) : [0, 0, 0, 0, 0, 0, 0];
-            const expenses = trendData && trendData.length > 0 ? trendData.map(t => t.expenses) : [0, 0, 0, 0, 0, 0, 0];
+            // 2. Line Chart (Earnings vs Expenses for selected month)
+            const labels = trendData && trendData.length > 0 ? trendData.map(t => t.day) : ['No Trips'];
+            const earnings = trendData && trendData.length > 0 ? trendData.map(t => t.earnings) : [0];
+            const expenses = trendData && trendData.length > 0 ? trendData.map(t => t.expenses) : [0];
 
             if (lineChartInstance) lineChartInstance.destroy();
             lineChartInstance = new Chart(lineCtx, {
@@ -296,7 +600,7 @@
                             borderColor: '#004ac6',
                             backgroundColor: 'rgba(0, 74, 198, 0.1)',
                             borderWidth: 2,
-                            tension: 0.4,
+                            tension: 0.3,
                             fill: true
                         },
                         {
@@ -304,8 +608,8 @@
                             data: expenses,
                             borderColor: '#ba1a1a',
                             borderWidth: 2,
-                            borderDash: [5, 5],
-                            tension: 0.4,
+                            borderDash: [4, 4],
+                            tension: 0.3,
                             fill: false
                         }
                     ]
@@ -318,26 +622,50 @@
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: function (value) { return '₹' + value; },
+                                callback: function (value) { return '₹' + value.toLocaleString('en-IN'); },
                                 font: { size: 10 }
                             },
                             grid: { color: '#f2f4f6' }
                         },
-                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                font: { size: 9 },
+                                maxRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 12
+                            } 
+                        }
                     }
                 }
             });
 
             // 3. Expense Breakdown Donut Chart
-            const fuel = expenseData ? (expenseData.fuel || 0) : 0;
-            const tolls = expenseData ? (expenseData.tolls || 0) : 0;
-            const allowance = expenseData ? (expenseData.allowance || 0) : 0;
-            const others = expenseData ? (expenseData.others || 0) : 0;
+            let donutLabels = [];
+            let donutValues = [];
+            let donutColors = [];
 
-            const hasExpense = (fuel + tolls + allowance + others) > 0;
-            const donutLabels = hasExpense ? ['Fuel', 'Tolls', 'Allowance', 'Others'] : ['No Expenses'];
-            const donutValues = hasExpense ? [fuel, tolls, allowance, others] : [1];
-            const donutColors = hasExpense ? ['#004ac6', '#ba1a1a', '#e06d00', '#7588ff'] : ['#e2e8f0'];
+            if (categoryBreakdown && Array.isArray(categoryBreakdown) && categoryBreakdown.length > 0) {
+                const palette = ['#004ac6', '#ba1a1a', '#e06d00', '#10b981', '#7588ff', '#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b'];
+                donutLabels = categoryBreakdown.map(c => c.name);
+                donutValues = categoryBreakdown.map(c => c.amount);
+                donutColors = categoryBreakdown.map((c, i) => palette[i % palette.length]);
+            } else {
+                const fuel = expenseData ? (expenseData.fuel || 0) : 0;
+                const tolls = expenseData ? (expenseData.tolls || 0) : 0;
+                const allowance = expenseData ? (expenseData.allowance || 0) : 0;
+                const others = expenseData ? (expenseData.others || 0) : 0;
+
+                const fuelLabel = categoryLabels.fuel || 'Fuel';
+                const tollsLabel = categoryLabels.tolls || 'Tolls';
+                const allowanceLabel = categoryLabels.allowance || 'Allowance';
+                const othersLabel = categoryLabels.others || 'Others';
+
+                const hasExpense = (fuel + tolls + allowance + others) > 0;
+                donutLabels = hasExpense ? [fuelLabel, tollsLabel, allowanceLabel, othersLabel] : ['No Expenses'];
+                donutValues = hasExpense ? [fuel, tolls, allowance, others] : [1];
+                donutColors = hasExpense ? ['#004ac6', '#ba1a1a', '#e06d00', '#7588ff'] : ['#e2e8f0'];
+            }
 
             if (donutChartInstance) donutChartInstance.destroy();
             donutChartInstance = new Chart(donutCtx, {
@@ -365,41 +693,58 @@
             });
         }
 
-        // Fetch Live Stats & Charts from Neon Database
-        async function fetchLiveStats() {
+        // Fetch Live Stats & Charts from Neon Database for selected month
+        async function fetchLiveStats(month = selectedMonth) {
             try {
-                const res = await fetch('/api/stats');
-                const json = await res.json();
-                if (json.success && json.data) {
-                    const d = json.data;
+                const queryParam = month ? `?month=${encodeURIComponent(month)}` : '';
+                const [statsRes, chartRes] = await Promise.all([
+                    fetch(`/api/stats${queryParam}`).then(r => r.json()),
+                    fetch(`/api/charts${queryParam}`).then(r => r.json())
+                ]);
+
+                if (statsRes.success && statsRes.data) {
+                    const d = statsRes.data;
                     const tripsEl = document.getElementById('stat-total-trips');
                     const incEl = document.getElementById('stat-total-income');
                     const expEl = document.getElementById('stat-total-expense');
                     const netEl = document.getElementById('stat-net-profit');
 
                     if (tripsEl) tripsEl.textContent = d.total_trips;
-                    if (incEl) incEl.textContent = '₹' + d.total_income.toLocaleString('en-IN');
-                    if (expEl) expEl.textContent = '₹' + d.total_expense.toLocaleString('en-IN');
-                    if (netEl) netEl.textContent = '₹' + d.net_profit.toLocaleString('en-IN');
+                    if (incEl) incEl.textContent = '₹' + Math.round(d.total_income).toLocaleString('en-IN');
+                    if (expEl) expEl.textContent = '₹' + Math.round(d.total_expense).toLocaleString('en-IN');
+                    if (netEl) netEl.textContent = '₹' + Math.round(d.net_profit).toLocaleString('en-IN');
                 }
 
-                const chartRes = await fetch('/api/charts');
-                const chartJson = await chartRes.json();
-                if (chartJson.success && chartJson.data) {
+                if (chartRes.success && chartRes.data) {
+                    if (chartRes.data.availableMonths) {
+                        availableMonthsCache = chartRes.data.availableMonths;
+                        updateMonthUI(month);
+                    }
                     initCharts(
-                        chartJson.data.trend || [], 
-                        chartJson.data.expenseBreakdown || {}, 
-                        chartJson.data.monthlyTrend || []
+                        chartRes.data.trend || [], 
+                        chartRes.data.expenseBreakdown || {}, 
+                        chartRes.data.monthlyTrend || [],
+                        month,
+                        chartRes.data.categoryLabels || {},
+                        chartRes.data.categoryBreakdown || []
                     );
                 } else {
-                    initCharts([], {}, []);
+                    initCharts([], {}, [], month);
                 }
             } catch (e) {
                 console.warn('Could not fetch stats/charts from database:', e);
-                initCharts([], {}, []);
+                initCharts([], {}, [], month);
             }
         }
-        fetchLiveStats();
+
+        // Initialize with default current month
+        updateMonthUI(selectedMonth);
+        fetchLiveStats(selectedMonth);
+
+        // Auto-refresh when navigating back from Settings or other pages
+        window.addEventListener('pageshow', () => {
+            fetchLiveStats(selectedMonth);
+        });
     </script>
 </body>
 

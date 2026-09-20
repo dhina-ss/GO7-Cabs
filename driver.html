@@ -221,6 +221,11 @@
                 <span class="material-symbols-outlined filled">person_pin</span>
                 <span class="text-[10px] font-semibold">Driver</span>
             </a>
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="settings.html">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="text-[10px]">Settings</span>
+            </a>
         </nav>
     </div>
 
@@ -355,16 +360,93 @@
                 }
             }
 
+            function parseNum(val) {
+                if (!val) return 0;
+                const clean = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+                return parseFloat(clean) || 0;
+            }
+
+            // Calculate live driver earnings dynamically from active trips (never rely on stale DB values)
+            function computeLiveStatsForDrivers(drivers, trips) {
+                const map = {};
+                drivers.forEach(d => {
+                    const drvNameLower = String(d.name || '').trim().toLowerCase();
+                    let count = 0;
+                    let earnings = 0;
+                    let income = 0;
+                    let expenses = 0;
+
+                    trips.forEach(t => {
+                        const names = String(t.driver_name || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                        const isAssigned = names.includes(drvNameLower) || t.driver_id === d.id;
+                        if (isAssigned) {
+                            count++;
+                            const numDrivers = names.length || 1;
+                            const tripInc = parseNum(t.income);
+                            const totalTripExp = parseNum(t.fuel) + parseNum(t.tolls) + parseNum(t.allowance) + parseNum(t.others);
+                            const expPerDriver = totalTripExp / numDrivers;
+                            let incPerDriver = tripInc / numDrivers;
+
+                            if (numDrivers > 1 && t.driver_amounts) {
+                                let dAmts = t.driver_amounts;
+                                if (typeof dAmts === 'string') {
+                                    try { dAmts = JSON.parse(dAmts); } catch (e) {}
+                                }
+                                if (dAmts && typeof dAmts === 'object') {
+                                    for (let k in dAmts) {
+                                        if (k.trim().toLowerCase() === drvNameLower) {
+                                            const p = parseNum(dAmts[k]);
+                                            if (p > 0) {
+                                                incPerDriver = p;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (numDrivers === 1) {
+                                incPerDriver = tripInc;
+                            }
+                            income += incPerDriver;
+                            expenses += expPerDriver;
+                            earnings += (incPerDriver - expPerDriver);
+                        }
+                    });
+
+                    map[d.id] = {
+                        trips_count: count,
+                        total_earnings: Math.round(earnings),
+                        total_income: Math.round(income),
+                        total_expense: Math.round(expenses)
+                    };
+                });
+                return map;
+            }
+
             async function loadDriversFromDB(searchQuery = '') {
                 try {
                     let url = '/api/drivers';
                     if (searchQuery) url += `?search=${encodeURIComponent(searchQuery)}`;
-                    const res = await fetch(url);
-                    const json = await res.json();
-                    if (json.success && Array.isArray(json.data)) {
-                        renderDriversList(json.data);
+                    const [driversRes, tripsRes] = await Promise.all([
+                        fetch(url).then(r => r.json()),
+                        fetch('/api/trips').then(r => r.json()).catch(() => ({ success: false, data: [] }))
+                    ]);
+
+                    if (driversRes.success && Array.isArray(driversRes.data)) {
+                        const drivers = driversRes.data;
+                        const trips = (tripsRes.success && Array.isArray(tripsRes.data)) ? tripsRes.data : [];
+
+                        // Compute LIVE earnings dynamically from trips records
+                        const liveMap = computeLiveStatsForDrivers(drivers, trips);
+                        drivers.forEach(d => {
+                            if (liveMap[d.id]) {
+                                d.trips_count = liveMap[d.id].trips_count;
+                                d.total_earnings = liveMap[d.id].total_earnings;
+                            }
+                        });
+
+                        renderDriversList(drivers);
                         if (!searchQuery && totalDriversCount) {
-                            totalDriversCount.textContent = json.data.length;
+                            totalDriversCount.textContent = drivers.length;
                         } else if (searchQuery) {
                             fetchTotalDriversCount();
                         }
@@ -390,8 +472,9 @@
 
                 drivers.forEach(d => {
                     const card = document.createElement('a');
-                    const earningsStr = parseFloat(d.total_earnings || 0).toLocaleString('en-IN');
-                    card.href = `driver_details.html?id=${encodeURIComponent(d.id)}&name=${encodeURIComponent(d.name)}&trips=${d.trips_count}&earnings=${earningsStr}`;
+                    const earningsVal = Math.round(parseFloat(d.total_earnings || 0));
+                    const earningsStr = earningsVal.toLocaleString('en-IN');
+                    card.href = `driver_details.html?id=${encodeURIComponent(d.id)}&name=${encodeURIComponent(d.name)}&trips=${d.trips_count || 0}&earnings=${earningsStr}`;
                     card.className = 'block cursor-pointer bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)] hover:border-primary/50 transition-colors flex flex-col gap-3';
                     card.innerHTML = `
                         <div class="flex justify-between items-start">

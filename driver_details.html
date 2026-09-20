@@ -225,6 +225,11 @@
                 <span class="material-symbols-outlined filled">person_pin</span>
                 <span class="text-[10px] font-semibold">Driver</span>
             </a>
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="settings.html">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="text-[10px]">Settings</span>
+            </a>
         </nav>
     </div>
 
@@ -379,11 +384,57 @@
                         const updatedEl = document.getElementById('driver-updated-at');
                         if (updatedEl) updatedEl.textContent = formatDT(d.updated_at || d.created_at);
 
+                        function parseNum(val) {
+                            if (!val) return 0;
+                            const clean = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+                            return parseFloat(clean) || 0;
+                        }
+
+                        // Compute LIVE earnings and trip count dynamically from actual trip records
+                        const drvNameLower = String(d.name || '').trim().toLowerCase();
+                        let liveTripsCount = 0;
+                        let liveEarnings = 0;
+
+                        trips.forEach(t => {
+                            const names = String(t.driver_name || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                            const isAssigned = names.includes(drvNameLower) || t.driver_id === d.id;
+                            if (isAssigned) {
+                                liveTripsCount++;
+                                const numDrivers = names.length || 1;
+                                const tripInc = parseNum(t.income);
+                                const totalTripExp = parseNum(t.fuel) + parseNum(t.tolls) + parseNum(t.allowance) + parseNum(t.others);
+                                const expPerDriver = totalTripExp / numDrivers;
+                                let incPerDriver = tripInc / numDrivers;
+
+                                if (numDrivers > 1 && t.driver_amounts) {
+                                    let dAmts = t.driver_amounts;
+                                    if (typeof dAmts === 'string') {
+                                        try { dAmts = JSON.parse(dAmts); } catch (e) {}
+                                    }
+                                    if (dAmts && typeof dAmts === 'object') {
+                                        for (let k in dAmts) {
+                                            if (k.trim().toLowerCase() === drvNameLower) {
+                                                const p = parseNum(dAmts[k]);
+                                                if (p > 0) {
+                                                    incPerDriver = p;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if (numDrivers === 1) {
+                                    incPerDriver = tripInc;
+                                }
+                                t._driver_income = incPerDriver;
+                                liveEarnings += (incPerDriver - expPerDriver);
+                            }
+                        });
+
                         const tripsEl = document.getElementById('driver-total-trips');
-                        if (tripsEl) tripsEl.textContent = d.trips_count || trips.length;
+                        if (tripsEl) tripsEl.textContent = liveTripsCount || d.trips_count || trips.length;
 
                         const earningsEl = document.getElementById('driver-total-earnings');
-                        if (earningsEl) earningsEl.textContent = '₹' + parseFloat(d.total_earnings || 0).toLocaleString('en-IN');
+                        if (earningsEl) earningsEl.textContent = '₹' + Math.round(liveEarnings).toLocaleString('en-IN');
 
                         const editNameInput = document.getElementById('edit-driver-name');
                         if (editNameInput) editNameInput.value = d.name || '';
@@ -402,7 +453,7 @@
                                 trips.forEach(t => {
                                     const dObj = new Date(t.trip_date);
                                     const dateStr = dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                    const inc = parseFloat(t.income || 0).toLocaleString('en-IN');
+                                    const displayInc = Math.round(t._driver_income !== undefined ? t._driver_income : parseNum(t.income)).toLocaleString('en-IN');
                                     const item = document.createElement('div');
                                     item.className = 'p-4 flex items-center justify-between hover:bg-surface-container-low transition-colors';
                                     item.innerHTML = `
@@ -416,7 +467,7 @@
                                             </div>
                                         </div>
                                         <div class="text-right">
-                                            <p class="text-xs font-bold text-on-surface">₹${inc}</p>
+                                            <p class="text-xs font-bold text-on-surface">₹${displayInc}</p>
                                         </div>
                                     `;
                                     listContainer.appendChild(item);

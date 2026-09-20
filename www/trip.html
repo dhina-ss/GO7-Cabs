@@ -186,6 +186,11 @@
                 <span class="material-symbols-outlined">person_pin</span>
                 <span class="text-[10px]">Driver</span>
             </a>
+            <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+                href="settings.html">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="text-[10px]">Settings</span>
+            </a>
         </nav>
     </div>
 
@@ -1117,10 +1122,86 @@
                 const expenseChipsContainer = document.getElementById('selected-expense-chips');
                 const dynamicFieldsContainer = document.getElementById('dynamic-expense-fields');
                 const expenseWrapper = document.getElementById('expense-dropdown-wrapper');
-                const expenseOptions = document.querySelectorAll('.expense-option');
-
                 const selectedExpenses = new Set();
                 const expenseAmounts = {};
+                let availableExpenseCategories = ['Fuel', 'Tolls', 'Allowance', 'Maintenance', 'Others'];
+                let activeCategoriesList = [];
+                let categorySystemMap = {
+                    fuel: 'Fuel',
+                    tolls: 'Tolls',
+                    allowance: 'Allowance',
+                    maintenance: 'Maintenance',
+                    others: 'Others'
+                };
+
+                function getCatName(sysKey, defaultName) {
+                    return categorySystemMap[sysKey] || defaultName;
+                }
+
+                function getDisplayExpenseName(rawKey) {
+                    if (!rawKey) return '';
+                    const lower = rawKey.trim().toLowerCase();
+                    if (categorySystemMap[lower]) {
+                        return categorySystemMap[lower];
+                    }
+                    if (Array.isArray(activeCategoriesList)) {
+                        for (const cat of activeCategoriesList) {
+                            if (cat.name.toLowerCase() === lower) return cat.name;
+                            if (cat.system_key && cat.system_key.toLowerCase() === lower) return cat.name;
+                        }
+                    }
+                    return rawKey;
+                }
+
+                let categoriesLoadPromise = null;
+                function ensureCategoriesLoaded() {
+                    if (!categoriesLoadPromise) {
+                        categoriesLoadPromise = loadExpenseCategories();
+                    }
+                    return categoriesLoadPromise;
+                }
+
+                async function loadExpenseCategories() {
+                    try {
+                        const res = await fetch('/api/expense-categories');
+                        const json = await res.json();
+                        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+                            activeCategoriesList = json.data;
+                            availableExpenseCategories = json.data.map(c => c.name);
+                            json.data.forEach(c => {
+                                if (c.system_key) categorySystemMap[c.system_key] = c.name;
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Could not load expense categories, using defaults:', e);
+                    }
+                    renderExpenseMenuItems();
+                }
+
+                function renderExpenseMenuItems() {
+                    if (!expenseMenu) return;
+                    expenseMenu.innerHTML = '';
+                    availableExpenseCategories.forEach(catName => {
+                        const opt = document.createElement('div');
+                        opt.setAttribute('data-expense', catName);
+                        opt.className = 'expense-option rounded-lg px-3 py-2 text-xs text-on-surface hover:bg-primary/10 hover:text-primary cursor-pointer transition-colors flex items-center justify-between select-none';
+                        opt.innerHTML = `
+                            <span>${catName}</span>
+                            <span class="material-symbols-outlined text-sm opacity-0 check-mark">check</span>
+                        `;
+                        opt.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (selectedExpenses.has(catName)) {
+                                selectedExpenses.delete(catName);
+                            } else {
+                                selectedExpenses.add(catName);
+                            }
+                            renderExpenseDropdownUI();
+                        });
+                        expenseMenu.appendChild(opt);
+                    });
+                    renderExpenseDropdownUI();
+                }
 
                 if (expenseBtn && expenseMenu) {
                     function toggleExpenseMenu(show) {
@@ -1145,24 +1226,14 @@
                             toggleExpenseMenu(false);
                         }
                     });
-
-                    expenseOptions.forEach(opt => {
-                        opt.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const key = opt.getAttribute('data-expense');
-                            if (selectedExpenses.has(key)) {
-                                selectedExpenses.delete(key);
-                            } else {
-                                selectedExpenses.add(key);
-                            }
-                            renderExpenseDropdownUI();
-                        });
-                    });
                 }
+
+                loadExpenseCategories();
 
                 function renderExpenseDropdownUI() {
                     // Highlight selected dropdown options
-                    expenseOptions.forEach(opt => {
+                    const opts = expenseMenu ? expenseMenu.querySelectorAll('.expense-option') : [];
+                    opts.forEach(opt => {
                         const key = opt.getAttribute('data-expense');
                         const check = opt.querySelector('.check-mark');
                         if (selectedExpenses.has(key)) {
@@ -1247,6 +1318,7 @@
 
                 const loadTripsFromDB = async function(search = '', startDate = '', endDate = '') {
                     try {
+                        await ensureCategoriesLoaded();
                         let url = '/api/trips?';
                         if (search) url += `search=${encodeURIComponent(search)}&`;
                         if (startDate && endDate) url += `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
@@ -1299,10 +1371,25 @@
                         const net = parseFloat(t.net_profit || 0);
 
                         let expenseChips = '';
-                        if (f > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Fuel: ₹${formatIN(f)}</span> `;
-                        if (tol > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Tolls: ₹${formatIN(tol)}</span> `;
-                        if (al > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Allowance: ₹${formatIN(al)}</span> `;
-                        if (oth > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">Others: ₹${formatIN(oth)}</span> `;
+                        let details = t.expense_details;
+                        if (typeof details === 'string') {
+                            try { details = JSON.parse(details); } catch (e) {}
+                        }
+                        if (details && typeof details === 'object' && Object.keys(details).length > 0) {
+                            for (const [catName, amtVal] of Object.entries(details)) {
+                                const amt = parseNum(amtVal);
+                                if (amt > 0) {
+                                    const displayName = getDisplayExpenseName(catName);
+                                    expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">${displayName}: ₹${formatIN(amt)}</span> `;
+                                }
+                            }
+                        }
+                        if (!expenseChips) {
+                            if (f > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">${getCatName('fuel', 'Fuel')}: ₹${formatIN(f)}</span> `;
+                            if (tol > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">${getCatName('tolls', 'Tolls')}: ₹${formatIN(tol)}</span> `;
+                            if (al > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">${getCatName('allowance', 'Allowance')}: ₹${formatIN(al)}</span> `;
+                            if (oth > 0) expenseChips += `<span class="bg-surface-container-low text-on-surface-variant px-2 py-0.5 rounded-md border border-outline-variant/40">${getCatName('others', 'Others')}: ₹${formatIN(oth)}</span> `;
+                        }
                         if (!expenseChips) expenseChips = `<span class="text-on-surface-variant text-[11px]">No Expenses recorded</span>`;
 
                         let routeHTML = '';
@@ -1427,10 +1514,26 @@
                 if (expContainer) {
                     expContainer.innerHTML = '';
                     let hasExp = false;
-                    if (f > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Fuel</span><span class="font-semibold text-on-surface">₹${formatIN(f)}</span></div>`; hasExp = true; }
-                    if (tol > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Tolls</span><span class="font-semibold text-on-surface">₹${formatIN(tol)}</span></div>`; hasExp = true; }
-                    if (al > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Allowance</span><span class="font-semibold text-on-surface">₹${formatIN(al)}</span></div>`; hasExp = true; }
-                    if (oth > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>Others</span><span class="font-semibold text-on-surface">₹${formatIN(oth)}</span></div>`; hasExp = true; }
+                    let details = t.expense_details;
+                    if (typeof details === 'string') {
+                        try { details = JSON.parse(details); } catch (e) {}
+                    }
+                    if (details && typeof details === 'object' && Object.keys(details).length > 0) {
+                        for (const [catName, amtVal] of Object.entries(details)) {
+                            const amt = parseNum(amtVal);
+                            if (amt > 0) {
+                                const displayName = getDisplayExpenseName(catName);
+                                expContainer.innerHTML += `<div class="flex justify-between"><span>${displayName}</span><span class="font-semibold text-on-surface">₹${formatIN(amt)}</span></div>`;
+                                hasExp = true;
+                            }
+                        }
+                    }
+                    if (!hasExp) {
+                        if (f > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>${getCatName('fuel', 'Fuel')}</span><span class="font-semibold text-on-surface">₹${formatIN(f)}</span></div>`; hasExp = true; }
+                        if (tol > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>${getCatName('tolls', 'Tolls')}</span><span class="font-semibold text-on-surface">₹${formatIN(tol)}</span></div>`; hasExp = true; }
+                        if (al > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>${getCatName('allowance', 'Allowance')}</span><span class="font-semibold text-on-surface">₹${formatIN(al)}</span></div>`; hasExp = true; }
+                        if (oth > 0) { expContainer.innerHTML += `<div class="flex justify-between"><span>${getCatName('others', 'Others')}</span><span class="font-semibold text-on-surface">₹${formatIN(oth)}</span></div>`; hasExp = true; }
+                    }
                     if (!hasExp) { expContainer.innerHTML = `<span class="text-on-surface-variant/70 italic text-[10px]">No expenses recorded</span>`; }
                 }
 
@@ -1568,15 +1671,31 @@
                     selectedExpenses.clear();
                     for (let k in expenseAmounts) delete expenseAmounts[k];
 
-                    const f = parseFloat(t.fuel || 0);
-                    const tol = parseFloat(t.tolls || 0);
-                    const al = parseFloat(t.allowance || 0);
-                    const oth = parseFloat(t.others || 0);
+                    let details = t.expense_details;
+                    if (typeof details === 'string') {
+                        try { details = JSON.parse(details); } catch (e) {}
+                    }
 
-                    if (f > 0) { selectedExpenses.add('Fuel'); expenseAmounts['Fuel'] = f.toString(); }
-                    if (tol > 0) { selectedExpenses.add('Tolls'); expenseAmounts['Tolls'] = tol.toString(); }
-                    if (al > 0) { selectedExpenses.add('Allowance'); expenseAmounts['Allowance'] = al.toString(); }
-                    if (oth > 0) { selectedExpenses.add('Others'); expenseAmounts['Others'] = oth.toString(); }
+                    if (details && typeof details === 'object' && Object.keys(details).length > 0) {
+                        for (const [k, v] of Object.entries(details)) {
+                            const amt = parseNum(v);
+                            if (amt > 0) {
+                                const displayName = getDisplayExpenseName(k);
+                                selectedExpenses.add(displayName);
+                                expenseAmounts[displayName] = amt.toString();
+                            }
+                        }
+                    } else {
+                        const f = parseFloat(t.fuel || 0);
+                        const tol = parseFloat(t.tolls || 0);
+                        const al = parseFloat(t.allowance || 0);
+                        const oth = parseFloat(t.others || 0);
+
+                        if (f > 0) { const name = getCatName('fuel', 'Fuel'); selectedExpenses.add(name); expenseAmounts[name] = f.toString(); }
+                        if (tol > 0) { const name = getCatName('tolls', 'Tolls'); selectedExpenses.add(name); expenseAmounts[name] = tol.toString(); }
+                        if (al > 0) { const name = getCatName('allowance', 'Allowance'); selectedExpenses.add(name); expenseAmounts[name] = al.toString(); }
+                        if (oth > 0) { const name = getCatName('others', 'Others'); selectedExpenses.add(name); expenseAmounts[name] = oth.toString(); }
+                    }
 
                     renderExpenseDropdownUI();
 
@@ -1598,9 +1717,27 @@
                     selectedExpenses.forEach(key => {
                         const field = dynamicFieldsContainer ? dynamicFieldsContainer.querySelector(`[data-expense-key="${key}"]`) : null;
                         const amt = field ? parseNum(field.value) : 0;
-                        if (key === 'Fuel') f = amt;
-                        else if (key === 'Tolls') tol = amt;
-                        else if (key === 'Allowance') al = amt;
+                        const kLower = key.trim().toLowerCase();
+                        let sysKey = null;
+                        for (const [sk, sName] of Object.entries(categorySystemMap)) {
+                            if (sName && sName.toLowerCase() === kLower) {
+                                sysKey = sk;
+                                break;
+                            }
+                        }
+                        if (!sysKey && Array.isArray(activeCategoriesList)) {
+                            const matched = activeCategoriesList.find(c => c.name.toLowerCase() === kLower);
+                            if (matched && matched.system_key) sysKey = matched.system_key;
+                        }
+                        if (!sysKey) {
+                            if (kLower === 'fuel' || kLower === 'petrol' || kLower === 'diesel') sysKey = 'fuel';
+                            else if (kLower === 'tolls' || kLower === 'toll') sysKey = 'tolls';
+                            else if (kLower === 'allowance' || kLower === 'bata') sysKey = 'allowance';
+                        }
+
+                        if (sysKey === 'fuel') f += amt;
+                        else if (sysKey === 'tolls') tol += amt;
+                        else if (sysKey === 'allowance') al += amt;
                         else oth += amt;
                     });
 
@@ -1638,6 +1775,7 @@
                             body: JSON.stringify({
                                 driver_name: driverVal,
                                 driver_amounts: driverAmounts,
+                                expense_details: expenseAmounts,
                                 trip_date: dateVal,
                                 trip_type: typeVal,
                                 from_location: fromLoc,
@@ -2019,6 +2157,16 @@
             if (typeof window.loadTripsFromDB === 'function') {
                 window.loadTripsFromDB();
             }
+
+            // Auto-refresh when navigating back from Settings or other pages
+            window.addEventListener('pageshow', () => {
+                categoriesLoadPromise = null;
+                loadExpenseCategories().then(() => {
+                    if (typeof window.loadTripsFromDB === 'function') {
+                        window.loadTripsFromDB();
+                    }
+                });
+            });
         });
     </script>
 </body>
