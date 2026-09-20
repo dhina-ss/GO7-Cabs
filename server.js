@@ -1053,8 +1053,24 @@ app.delete('/api/expense-categories/:id', async (req, res) => {
     }
 });
 
-// Fallback to home.html
-app.get('/', (req, res) => {
+// HTML Page Routes
+app.get(['/settings', '/settings.html'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'settings.html'));
+});
+
+app.get(['/trip', '/trip.html'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'trip.html'));
+});
+
+app.get(['/driver', '/driver.html'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'driver.html'));
+});
+
+app.get(['/driver_details', '/driver_details.html'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'driver_details.html'));
+});
+
+app.get(['/', '/home', '/home.html'], (req, res) => {
     res.sendFile(path.join(__dirname, 'home.html'));
 });
 

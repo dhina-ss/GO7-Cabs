@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>GO7 Cabs - Settings</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#004ac6">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" href="go7-logo.png">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#004ac6",
+                        "primary-container": "#2563eb",
+                        "secondary": "#505f76",
+                        "surface": "#f7f9fb",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container": "#eceef0",
+                        "surface-container-high": "#e6e8ea",
+                        "on-surface": "#191c1e",
+                        "on-surface-variant": "#434655",
+                        "outline": "#737686",
+                        "outline-variant": "#c3c6d7",
+                        "error": "#ba1a1a",
+                        "background": "#f7f9fb",
+                        "on-background": "#191c1e"
+                    },
+                    "fontFamily": {
+                        "sans": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-background font-sans min-h-screen pb-24">
+    <!-- Top App Bar (Mobile) - Matching home.html -->
+    <header
+        class="fixed top-0 left-0 w-full z-40 bg-surface/80 backdrop-blur-md dark:bg-background/80 border-b border-outline-variant dark:border-outline flex justify-between items-center h-16 px-4">
+        <img src="go7-logo.png" alt="Go 7 Logo" class="h-9 w-auto object-contain" />
+    </header>
+
+    <!-- Main Content Canvas -->
+    <main class="pt-20 px-4 space-y-5 max-w-md mx-auto">
+        <!-- Page Header & Action -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-on-surface">Settings</h2>
+                <p class="text-xs text-on-surface-variant">Manage categories &amp; preferences</p>
+            </div>
+            <button id="open-add-category-btn" type="button"
+                class="flex items-center gap-1.5 bg-primary text-white px-3.5 py-2 rounded-full shadow-md hover:bg-primary/90 transition-all active:scale-95 text-xs font-semibold cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                <span>Add Category</span>
+            </button>
+        </div>
+
+        <!-- Summary Metric Bento Card -->
+        <section class="grid grid-cols-1 gap-3">
+            <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+                <div class="flex items-center gap-2 text-on-surface-variant mb-1">
+                    <span class="material-symbols-outlined text-primary text-[20px]">category</span>
+                    <span class="text-xs font-medium">Categories</span>
+                </div>
+                <div>
+                    <span id="total-categories-count" class="text-2xl font-extrabold text-on-surface">0</span>
+                    <p class="text-[10px] text-on-surface-variant mt-0.5">Active categories</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Expense Categories Section -->
+        <section class="bg-surface-container-lowest border border-outline-variant/60 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-low/40">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[16px]">payments</span>
+                    </div>
+                    <h3 class="text-xs font-bold text-on-surface">Expense Categories</h3>
+                </div>
+                <span class="text-[11px] text-on-surface-variant">Trip expenses</span>
+            </div>
+
+            <!-- Category List Container -->
+            <div id="category-list-container" class="divide-y divide-outline-variant/30">
+                <div class="p-8 text-center text-xs text-on-surface-variant">
+                    <span class="animate-spin inline-block h-4 w-4 border-2 border-primary border-t-transparent rounded-full mb-2"></span>
+                    <p>Loading categories...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- App Info / Version Card -->
+        <div class="bg-surface-container-low/60 border border-outline-variant/40 rounded-2xl p-4 text-center space-y-1">
+            <p class="text-[11px] text-on-surface-variant">Developed by <a href="https://thelance.in" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline">The Lance</a></p>
+        </div>
+    </main>
+
+    <!-- Floating Rounded Bottom Navigation Bar (Mobile) - Matching home.html with Settings -->
+    <nav
+        class="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm h-16 bg-surface/95 backdrop-blur-md border border-outline-variant/60 rounded-full shadow-lg flex justify-around items-center z-50 transition-all">
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+            href="home.html">
+            <span class="material-symbols-outlined">home</span>
+            <span class="text-[10px]">Home</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+            href="trip.html">
+            <span class="material-symbols-outlined">route</span>
+            <span class="text-[10px]">Trip</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all p-2 active:scale-95"
+            href="driver.html">
+            <span class="material-symbols-outlined">person_pin</span>
+            <span class="text-[10px]">Driver</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-primary p-2 transition-transform active:scale-95"
+            href="settings.html">
+            <span class="material-symbols-outlined filled">settings</span>
+            <span class="text-[10px] font-semibold">Settings</span>
+        </a>
+    </nav>
+
+    <!-- Add / Edit Category Modal Dialog -->
+    <div id="category-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-opacity">
+        <div class="bg-surface-container-lowest w-full max-w-sm rounded-3xl border border-outline-variant/60 shadow-2xl p-6 space-y-4 relative">
+            <div class="flex justify-between items-center border-b border-outline-variant/40 pb-3">
+                <h3 id="modal-category-title" class="text-base font-bold text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[20px]">add_circle</span>
+                    <span>Add Expense Category</span>
+                </h3>
+                <button type="button" id="close-category-modal-btn"
+                    class="w-8 h-8 flex justify-center items-center rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            <form id="category-form" class="space-y-4">
+                <input type="hidden" id="editing-category-id" value="" />
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface-variant mb-1.5">
+                        Category Name <span class="text-error">*</span>
+                    </label>
+                    <input type="text" id="category-name-input" required placeholder="e.g. Fastag, Parking, Challan"
+                        class="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2.5 text-xs text-on-surface focus:ring-2 focus:ring-primary outline-none transition-all" />
+                    <p id="modal-category-hint" class="text-[10px] text-on-surface-variant mt-1">This category will appear in the trip expense selector.</p>
+                </div>
+
+                <div class="flex gap-2.5 pt-2">
+                    <button type="button" id="cancel-category-modal-btn"
+                        class="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface font-semibold text-xs hover:bg-surface-container transition-colors cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" id="save-category-btn"
+                        class="flex-1 py-2.5 rounded-xl bg-primary text-white font-semibold text-xs hover:bg-primary/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span id="save-category-text">Save Category</span>
+                        <span id="save-category-spinner" class="hidden animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="bg-surface-container-lowest w-full max-w-sm rounded-3xl border border-outline-variant/60 shadow-2xl p-6 relative flex flex-col items-center text-center space-y-4">
+            <div class="w-14 h-14 rounded-full bg-error/10 text-error flex items-center justify-center border border-error/20 shadow-sm">
+                <span class="material-symbols-outlined text-[28px]">delete_forever</span>
+            </div>
+
+            <div class="space-y-1">
+                <h3 class="text-base font-bold text-on-surface">Delete Category?</h3>
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                    Are you sure you want to remove <span id="delete-category-name" class="font-bold text-on-surface"></span>?
+                </p>
+                <p class="text-[11px] text-on-surface-variant bg-surface-container-low p-2 rounded-xl border border-outline-variant/30 mt-2">
+                    Existing trips using this category will keep their financial records intact.
+                </p>
+            </div>
+
+            <div class="flex gap-2.5 w-full pt-2">
+                <button type="button" id="cancel-delete-btn"
+                    class="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface font-semibold text-xs hover:bg-surface-container transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" id="confirm-delete-btn"
+                    class="flex-1 py-2.5 rounded-xl bg-error text-white font-semibold text-xs hover:bg-error/90 shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span id="confirm-delete-text">Delete</span>
+                    <span id="confirm-delete-spinner" class="hidden animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Banner -->
+    <div id="toast-banner" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 hidden transition-all max-w-xs w-full px-4">
+        <div id="toast-content" class="bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2">
+            <span id="toast-icon" class="material-symbols-outlined text-[18px]">check_circle</span>
+            <span id="toast-message">Operation successful</span>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const listContainer = document.getElementById('category-list-container');
+            const totalCountEl = document.getElementById('total-categories-count');
+            const customCountEl = document.getElementById('custom-categories-count');
+
+            const modal = document.getElementById('category-modal');
+            const modalTitle = document.getElementById('modal-category-title');
+            const modalHint = document.getElementById('modal-category-hint');
+            const form = document.getElementById('category-form');
+            const nameInput = document.getElementById('category-name-input');
+            const editingIdInput = document.getElementById('editing-category-id');
+            const openAddBtn = document.getElementById('open-add-category-btn');
+            const closeModalBtn = document.getElementById('close-category-modal-btn');
+            const cancelModalBtn = document.getElementById('cancel-category-modal-btn');
+            const saveBtn = document.getElementById('save-category-btn');
+            const saveText = document.getElementById('save-category-text');
+            const saveSpinner = document.getElementById('save-category-spinner');
+
+            const deleteModal = document.getElementById('delete-confirm-modal');
+            const deleteNameEl = document.getElementById('delete-category-name');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const confirmDeleteText = document.getElementById('confirm-delete-text');
+            const confirmDeleteSpinner = document.getElementById('confirm-delete-spinner');
+
+            let pendingDeleteId = null;
+            let currentCategories = [];
+
+            function showToast(message, isError = false) {
+                const toast = document.getElementById('toast-banner');
+                const content = document.getElementById('toast-content');
+                const msg = document.getElementById('toast-message');
+                const icon = document.getElementById('toast-icon');
+
+                if (!toast || !content) return;
+                msg.textContent = message;
+                if (isError) {
+                    content.className = 'bg-error text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2';
+                    icon.textContent = 'error';
+                } else {
+                    content.className = 'bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2';
+                    icon.textContent = 'check_circle';
+                }
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 3000);
+            }
+
+            function getCategoryIcon(name) {
+                const lower = String(name || '').toLowerCase();
+                if (lower.includes('fuel') || lower.includes('petrol') || lower.includes('diesel')) return 'local_gas_station';
+                if (lower.includes('toll') || lower.includes('fastag')) return 'toll';
+                if (lower.includes('allowance') || lower.includes('bata') || lower.includes('food')) return 'badge';
+                if (lower.includes('maintenance') || lower.includes('repair') || lower.includes('service')) return 'build';
+                if (lower.includes('clean') || lower.includes('wash')) return 'local_car_wash';
+                if (lower.includes('park')) return 'local_parking';
+                if (lower.includes('police') || lower.includes('challan') || lower.includes('fine')) return 'gavel';
+                return 'receipt_long';
+            }
+
+            async function loadCategories() {
+                try {
+                    const res = await fetch('/api/expense-categories');
+                    const json = await res.json();
+                    if (json.success && Array.isArray(json.data)) {
+                        currentCategories = json.data;
+                        renderCategories(json.data);
+                    } else {
+                        listContainer.innerHTML = `<div class="p-6 text-center text-xs text-on-surface-variant">Could not load categories</div>`;
+                    }
+                } catch (err) {
+                    console.error('Error loading expense categories:', err);
+                    listContainer.innerHTML = `<div class="p-6 text-center text-xs text-error">Failed to connect to server</div>`;
+                }
+            }
+
+            function renderCategories(categories) {
+                if (!listContainer) return;
+                listContainer.innerHTML = '';
+
+                let customCount = 0;
+                categories.forEach(c => {
+                    if (!c.is_system) customCount++;
+                });
+
+                if (totalCountEl) totalCountEl.textContent = categories.length;
+                if (customCountEl) customCountEl.textContent = customCount;
+
+                if (categories.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="p-8 text-center text-xs text-on-surface-variant">
+                            <span class="material-symbols-outlined text-3xl text-outline mb-1 block">category</span>
+                            No expense categories found
+                        </div>
+                    `;
+                    return;
+                }
+
+                categories.forEach(cat => {
+                    const iconName = getCategoryIcon(cat.name);
+                    const item = document.createElement('div');
+                    item.className = 'p-3.5 flex items-center justify-between hover:bg-surface-container-low/50 transition-colors';
+                    
+                    const isSystem = Boolean(cat.is_system);
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl ${isSystem ? 'bg-primary/10 text-primary' : 'bg-emerald-100 text-emerald-800'} flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-[18px]">${iconName}</span>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <h4 class="text-xs font-bold text-on-surface">${cat.name}</h4>
+                                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-md ${isSystem ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+                                        ${isSystem ? 'Default' : 'Custom'}
+                                    </span>
+                                </div>
+                                <p class="text-[10px] text-on-surface-variant">ID: #${cat.id}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <button type="button" class="edit-cat-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors cursor-pointer" title="Edit Category" data-id="${cat.id}" data-name="${cat.name}">
+                                <span class="material-symbols-outlined text-[17px]">edit</span>
+                            </button>
+                            ${!isSystem ? `
+                                <button type="button" class="delete-cat-btn w-8 h-8 flex items-center justify-center rounded-full hover:bg-error/10 text-error transition-colors cursor-pointer" title="Delete Category" data-id="${cat.id}" data-name="${cat.name}">
+                                    <span class="material-symbols-outlined text-[17px]">delete</span>
+                                </button>
+                            ` : `
+                                <span class="w-8 h-8 flex items-center justify-center text-outline/50 cursor-not-allowed" title="System default category">
+                                    <span class="material-symbols-outlined text-[16px]">lock</span>
+                                </span>
+                            `}
+                        </div>
+                    `;
+
+                    listContainer.appendChild(item);
+                });
+
+                // Attach button listeners
+                listContainer.querySelectorAll('.edit-cat-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.getAttribute('data-id');
+                        const name = btn.getAttribute('data-name');
+                        openEditModal(id, name);
+                    });
+                });
+
+                listContainer.querySelectorAll('.delete-cat-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.getAttribute('data-id');
+                        const name = btn.getAttribute('data-name');
+                        openDeleteModal(id, name);
+                    });
+                });
+            }
+
+            function openAddModal() {
+                editingIdInput.value = '';
+                nameInput.value = '';
+                modalTitle.innerHTML = `<span class="material-symbols-outlined text-primary text-[20px]">add_circle</span><span>Add Expense Category</span>`;
+                if (modalHint) modalHint.textContent = 'This category will appear in the trip expense selector.';
+                saveText.textContent = 'Save Category';
+                modal.classList.remove('hidden');
+                setTimeout(() => nameInput.focus(), 50);
+            }
+
+            function openEditModal(id, currentName) {
+                editingIdInput.value = id;
+                nameInput.value = currentName || '';
+                modalTitle.innerHTML = `<span class="material-symbols-outlined text-primary text-[20px]">edit_note</span><span>Edit Category</span>`;
+                if (modalHint) modalHint.innerHTML = '<span class="text-primary font-semibold">Renaming will automatically update this category across all past and active trips.</span>';
+                saveText.textContent = 'Update Category';
+                modal.classList.remove('hidden');
+                setTimeout(() => nameInput.focus(), 50);
+            }
+
+            function closeModal() {
+                modal.classList.add('hidden');
+                editingIdInput.value = '';
+                nameInput.value = '';
+            }
+
+            if (openAddBtn) openAddBtn.addEventListener('click', openAddModal);
+            if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+            if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal();
+                });
+            }
+
+            // Save / Update Handler
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const name = nameInput.value.trim();
+                    const editingId = editingIdInput.value;
+
+                    if (!name) return;
+
+                    saveBtn.disabled = true;
+                    saveText.textContent = 'Saving...';
+                    saveSpinner.classList.remove('hidden');
+
+                    try {
+                        const url = editingId ? `/api/expense-categories/${editingId}` : '/api/expense-categories';
+                        const method = editingId ? 'PUT' : 'POST';
+
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name })
+                        });
+
+                        const json = await res.json();
+                        if (json.success) {
+                            closeModal();
+                            showToast(editingId ? 'Category renamed and updated across all trips!' : 'Category added successfully!');
+                            loadCategories();
+                        } else {
+                            showToast(json.message || 'Error saving category', true);
+                        }
+                    } catch (err) {
+                        console.error('Save category error:', err);
+                        showToast('Failed to save category. Please try again.', true);
+                    } finally {
+                        saveBtn.disabled = false;
+                        saveText.textContent = editingId ? 'Update Category' : 'Save Category';
+                        saveSpinner.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Delete Modal Handlers
+            function openDeleteModal(id, name) {
+                pendingDeleteId = id;
+                if (deleteNameEl) deleteNameEl.textContent = `"${name}"`;
+                deleteModal.classList.remove('hidden');
+            }
+
+            function closeDeleteModal() {
+                deleteModal.classList.add('hidden');
+                pendingDeleteId = null;
+            }
+
+            if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+            if (deleteModal) {
+                deleteModal.addEventListener('click', (e) => {
+                    if (e.target === deleteModal) closeDeleteModal();
+                });
+            }
+
+            if (confirmDeleteBtn) {
+                confirmDeleteBtn.addEventListener('click', async () => {
+                    if (!pendingDeleteId) return;
+
+                    confirmDeleteBtn.disabled = true;
+                    confirmDeleteText.textContent = 'Deleting...';
+                    confirmDeleteSpinner.classList.remove('hidden');
+
+                    try {
+                        const res = await fetch(`/api/expense-categories/${pendingDeleteId}`, {
+                            method: 'DELETE'
+                        });
+                        const json = await res.json();
+                        if (json.success) {
+                            closeDeleteModal();
+                            showToast('Category deleted successfully!');
+                            loadCategories();
+                        } else {
+                            showToast(json.message || 'Could not delete category', true);
+                        }
+                    } catch (err) {
+                        console.error('Delete category error:', err);
+                        showToast('Failed to delete category', true);
+                    } finally {
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteText.textContent = 'Delete';
+                        confirmDeleteSpinner.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Initial load
+            loadCategories();
+        });
+    </script>
+</body>
+
+</html>
