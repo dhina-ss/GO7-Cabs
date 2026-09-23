@@ -1402,6 +1402,9 @@
 
                         const card = document.createElement('div');
                         card.className = 'trip-card bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-4 shadow-sm hover:border-primary/50 transition-all flex flex-col gap-3 cursor-pointer active:scale-[0.99]';
+                        card.setAttribute('data-id', t.id);
+                        const tripDateIso = t.trip_date ? String(t.trip_date).split('T')[0] : '';
+                        card.setAttribute('data-date', tripDateIso);
                         card.addEventListener('click', () => {
                             if (typeof openTripDetailsModal === 'function') {
                                 openTripDetailsModal(t.id);
@@ -1867,7 +1870,7 @@
             const prevMonthBtn = document.getElementById('prev-month-btn');
             const nextMonthBtn = document.getElementById('next-month-btn');
 
-            let currentCalendarDate = new Date(2026, 9, 1); // Oct 2026
+            let currentCalendarDate = new Date();
             let rangeStart = null;
             let rangeEnd = null;
 
@@ -2018,13 +2021,14 @@
                 applyFilterBtn.addEventListener('click', () => {
                     const cards = tripListContainer.querySelectorAll('.trip-card');
                     if (rangeStart) {
-                        const fromTime = rangeStart.getTime();
-                        const toTime = rangeEnd ? rangeEnd.getTime() + 86400000 : fromTime + 86400000;
+                        const fromTime = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).getTime();
+                        const toEnd = rangeEnd || rangeStart;
+                        const toTime = new Date(toEnd.getFullYear(), toEnd.getMonth(), toEnd.getDate(), 23, 59, 59, 999).getTime();
 
                         cards.forEach(c => {
-                            const dateTextMatch = c.textContent.match(/Date:\s*([A-Za-z]+\s+\d+,\s+\d{4})/);
-                            if (dateTextMatch) {
-                                const cardDate = new Date(dateTextMatch[1]).getTime();
+                            const dateAttr = c.getAttribute('data-date');
+                            if (dateAttr) {
+                                const cardDate = new Date(dateAttr + 'T00:00:00').getTime();
                                 if (cardDate >= fromTime && cardDate <= toTime) {
                                     c.style.display = 'flex';
                                 } else {
@@ -2046,68 +2050,60 @@
             const downloadBtns = [document.getElementById('header-download-btn'), document.getElementById('toolbar-download-btn')];
             downloadBtns.forEach(btn => {
                 if (btn && tripListContainer) {
-                    btn.addEventListener('click', () => {
+                    btn.addEventListener('click', async () => {
                         const visibleCards = Array.from(tripListContainer.querySelectorAll('.trip-card')).filter(c => c.style.display !== 'none');
                         const excelRows = [];
 
                         visibleCards.forEach((card, idx) => {
-                            // 1. S.No
                             const sNo = idx + 1;
+                            const tripId = card.getAttribute('data-id');
+                            const t = window.currentTripsData ? window.currentTripsData.find(x => String(x.id) === String(tripId)) : null;
 
-                            // 2. Driver Name
-                            const driverNameEl = card.querySelector('h4');
-                            const driverName = driverNameEl ? driverNameEl.textContent.trim() : 'N/A';
-
-                            // 3. Date & Type
-                            const pEl = card.querySelector('p');
-                            let dateStr = 'N/A';
+                            let formattedDate = 'N/A';
+                            let driverName = 'N/A';
+                            let fromLocStr = '-';
+                            let toLocStr = '-';
                             let typeStr = 'N/A';
-                            if (pEl) {
-                                const text = pEl.textContent;
-                                const dateMatch = text.match(/Date:\s*([A-Za-z0-9,\s]+?)(?:•|\$)/);
-                                if (dateMatch) dateStr = dateMatch[1].trim();
-                                const typeMatch = text.match(/Type:\s*([^\n\r•]+)/);
-                                if (typeMatch) typeStr = typeMatch[1].trim();
-                            }
-
-                            // 4. Expenses (Fuel, Tolls, Allowance, Others)
+                            let income = 0;
                             let fuel = 0;
                             let tolls = 0;
                             let allowance = 0;
                             let others = 0;
-
-                            const badges = card.querySelectorAll('.flex-wrap span');
-                            badges.forEach(b => {
-                                const bText = b.textContent;
-                                const amt = parseFloat(bText.replace(/[^0-9.]/g, '')) || 0;
-                                if (bText.includes('Fuel:')) fuel = amt;
-                                else if (bText.includes('Tolls:')) tolls = amt;
-                                else if (bText.includes('Allowance:') || bText.includes('Allowence:')) allowance = amt;
-                                else if (bText.includes('Others:')) others = amt;
-                            });
-
-                            // 5. Income & Net Profit
-                            let income = 0;
                             let netProfit = 0;
 
-                            const bottomText = card.textContent;
-                            const incMatch = bottomText.match(/Income \/ Expense\s*₹([\d,]+)/i);
-                            if (incMatch) income = parseFloat(incMatch[1].replace(/,/g, '')) || 0;
-
-                            const netMatch = bottomText.match(/Net Profit\s*₹([\d,]+)/i);
-                            if (netMatch) netProfit = parseFloat(netMatch[1].replace(/,/g, '')) || 0;
-
-                            let fromLocStr = 'N/A';
-                            let toLocStr = 'N/A';
-                            const locMatch = card.textContent.match(/([A-Za-z\s]+)➔([A-Za-z\s]+)/);
-                            if (locMatch) {
-                                fromLocStr = locMatch[1].trim();
-                                toLocStr = locMatch[2].trim();
+                            if (t) {
+                                if (t.trip_date) {
+                                    const dtStr = String(t.trip_date).split('T')[0];
+                                    const parts = dtStr.split('-');
+                                    if (parts.length === 3) formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                    else formattedDate = dtStr;
+                                }
+                                driverName = t.driver_name || 'N/A';
+                                fromLocStr = t.from_location || '-';
+                                toLocStr = t.to_location || '-';
+                                typeStr = t.trip_type || 'Out';
+                                income = parseFloat(t.income || 0);
+                                fuel = parseFloat(t.fuel || 0);
+                                tolls = parseFloat(t.tolls || 0);
+                                allowance = parseFloat(t.allowance || 0);
+                                others = parseFloat(t.others || 0);
+                                netProfit = parseFloat(t.net_profit || (income - (fuel + tolls + allowance + others)));
+                            } else {
+                                const driverNameEl = card.querySelector('h4');
+                                driverName = driverNameEl ? driverNameEl.textContent.trim() : 'N/A';
+                                const pEl = card.querySelector('p');
+                                if (pEl) {
+                                    const text = pEl.textContent;
+                                    const dateMatch = text.match(/Date:\s*([^\s•]+)/);
+                                    if (dateMatch) formattedDate = dateMatch[1].trim();
+                                    const typeMatch = text.match(/Type:\s*([^\n\r•]+)/);
+                                    if (typeMatch) typeStr = typeMatch[1].trim();
+                                }
                             }
 
                             excelRows.push({
                                 "S.No": sNo,
-                                "Date": dateStr,
+                                "Date": formattedDate,
                                 "Driver Name": driverName,
                                 "From": fromLocStr,
                                 "To": toLocStr,
@@ -2156,9 +2152,9 @@
                             XLSXLib.utils.book_append_sheet(workbook, worksheet, "Saved Trips");
                             XLSXLib.writeFile(workbook, "Go7_Saved_Trips_Report.xlsx");
                         } else {
-                            let csv = "S.No,Date,Driver Name,Type,Income,Fuel,Tolls,Allowance,Others,Net Profit\n";
+                            let csv = "S.No,Date,Driver Name,From,To,Type,Income,Fuel,Tolls,Allowance,Others,Net Profit\n";
                             excelRows.forEach(r => {
-                                csv += `${r["S.No"]},"${r.Date}","${r["Driver Name"]}","${r.Type}",${r.Income},${r.Fuel},${r.Tolls},${r.Allowance},${r.Others},${r["Net Profit"]}\n`;
+                                csv += `${r["S.No"]},"${r.Date}","${r["Driver Name"]}","${r.From}","${r.To}","${r.Type}",${r.Income},${r.Fuel},${r.Tolls},${r.Allowance},${r.Others},${r["Net Profit"]}\n`;
                             });
                             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                             const link = document.createElement("a");
